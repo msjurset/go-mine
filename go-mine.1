@@ -24,7 +24,11 @@ The Table view displays paginated data with vim-style navigation, column
 sorting, and a row detail overlay. The Stats view shows per-column statistics
 including count, nulls, unique values, mean, standard deviation, min, max, and
 distribution histograms for numeric columns. The Filter view allows filtering
-rows with expressions like \fBage > 30 AND city == "Seattle"\fR. The SQL view
+rows with expressions like \fBage > 30 AND city == "Seattle"\fR, including
+regex matching with \fB.matches()\fR, \fB.startswith()\fR, and
+\fB.endswith()\fR. Pressing enter on a blank filter clears any active filter
+and returns to the Table view. Filtered data can be exported to CSV, Parquet,
+or JSON via \fBctrl+e\fR from any view. The SQL view
 provides a full SQL query interface using golars SQLContext. The Columns view
 shows detailed metadata and sample values for every column.
 .PP
@@ -92,7 +96,8 @@ Clear sort.
 .SS Filter View
 .TP
 .B enter
-Apply filter expression.
+Apply filter expression. If the input is blank, clears any active filter and
+returns to the Table view.
 .TP
 .B ctrl+r
 Clear filter and restore full dataset.
@@ -102,19 +107,30 @@ Browse filter history.
 .TP
 .B esc
 Unfocus input.
+.SS Export
+.TP
+.B ctrl+e
+Open export dialog to save current data to a file (.csv, .parquet, .json).
 .SS SQL View
 .TP
 .B enter
-Execute SQL query.
-.TP
-.B ctrl+l
-Clear result.
-.TP
-.B up/down
-Browse query history.
+Execute SQL query. Results appear in a full interactive table.
 .TP
 .B esc
-Unfocus input.
+Toggle between editing the query and browsing results. When the input is
+focused, esc unfocuses it so you can navigate the result table. When browsing
+results, esc returns focus to the query input.
+.TP
+.B ctrl+l
+Clear result and return to query input.
+.TP
+.B up/down
+Browse query history (when input is focused) or navigate result rows (when
+browsing results).
+.TP
+.B j/k, h/l, pgup/pgdn, g/G, s, S, enter
+Standard table navigation keys work in the SQL result table (sort, page,
+scroll columns, open row detail).
 .SH FILTER SYNTAX
 Filters use a simple expression language:
 .PP
@@ -130,6 +146,12 @@ column.is_null
 column.is_not_null
 .br
 column.contains("substr")
+.br
+column.matches("^regex.*pattern$")
+.br
+column.startswith("prefix")
+.br
+column.endswith("suffix")
 .RE
 .SH EXAMPLES
 .TP

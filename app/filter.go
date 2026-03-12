@@ -24,7 +24,7 @@ type FilterModel struct {
 
 func NewFilterModel(df *golars.DataFrame) FilterModel {
 	ti := textinput.New()
-	ti.Placeholder = `e.g. age > 30, name == "Alice", score >= 80.0 AND score <= 100.0`
+	ti.Placeholder = `e.g. age > 30, name.matches("^A.*"), score >= 80.0 AND score <= 100.0`
 	ti.CharLimit = 256
 	ti.Width = 80
 
@@ -131,9 +131,11 @@ func (m FilterModel) View() string {
 
 	// Help text
 	b.WriteString(helpStyle.Render("  Syntax examples:") + "\n")
-	b.WriteString(helpStyle.Render("    column > 42          column == \"text\"       column != 0") + "\n")
-	b.WriteString(helpStyle.Render("    column >= 10 AND column <= 100             column.is_null") + "\n")
-	b.WriteString(helpStyle.Render("    column.contains(\"substr\")                  column.is_not_null") + "\n")
+	b.WriteString(helpStyle.Render("    age > 30             name == \"Alice\"        salary != 0") + "\n")
+	b.WriteString(helpStyle.Render("    age >= 25 AND age <= 40                    bonus.is_null") + "\n")
+	b.WriteString(helpStyle.Render("    name.contains(\"son\")                       status.is_not_null") + "\n")
+	b.WriteString(helpStyle.Render("    email.matches(\"^[a-z]+\\\\.s.*@\")            name.startswith(\"Al\")") + "\n")
+	b.WriteString(helpStyle.Render("    city.endswith(\"ton\")                        name.matches(\"^[A-C]\")") + "\n")
 	b.WriteString(helpStyle.Render("  ") + "\n")
 	b.WriteString(helpStyle.Render("  enter:apply  ctrl+r:clear filter  ↑↓:history  esc:unfocus") + "\n\n")
 
@@ -195,11 +197,25 @@ func parseFilterExpr(text string, df *golars.DataFrame) (golars.Expr, error) {
 		colName := strings.TrimSpace(text[:idx])
 		return golars.Col(colName).IsNotNull(), nil
 	}
-	if idx := strings.Index(text, ".contains("); idx > 0 && strings.HasSuffix(text, ")") {
-		colName := strings.TrimSpace(text[:idx])
-		arg := text[idx+len(".contains(") : len(text)-1]
-		arg = strings.Trim(arg, `"'`)
-		return golars.Col(colName).Str().Contains(arg), nil
+	// String method calls: .contains(), .matches(), .startswith(), .endswith()
+	stringMethods := []struct {
+		method string
+		build  func(colName, arg string) golars.Expr
+	}{
+		{".contains(", func(c, a string) golars.Expr { return golars.Col(c).Str().Contains(a) }},
+		{".matches(", func(c, a string) golars.Expr {
+			return golars.Col(c).Str().CountMatches(a).Gt(golars.Lit(int64(0)))
+		}},
+		{".startswith(", func(c, a string) golars.Expr { return golars.Col(c).Str().StartsWith(a) }},
+		{".endswith(", func(c, a string) golars.Expr { return golars.Col(c).Str().EndsWith(a) }},
+	}
+	for _, sm := range stringMethods {
+		if idx := strings.Index(text, sm.method); idx > 0 && strings.HasSuffix(text, ")") && !strings.Contains(text[:idx], " ") {
+			colName := strings.TrimSpace(text[:idx])
+			arg := text[idx+len(sm.method) : len(text)-1]
+			arg = strings.Trim(arg, `"'`)
+			return sm.build(colName, arg), nil
+		}
 	}
 
 	// Handle comparison: col op value

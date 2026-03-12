@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math"
 	"math/rand/v2"
 	"os"
 	"path/filepath"
@@ -36,6 +37,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "  s          Sort by current column (cycles: asc → desc → none)\n")
 		fmt.Fprintf(os.Stderr, "  pgup/pgdn  Page through data\n")
 		fmt.Fprintf(os.Stderr, "  g/G        Jump to top/bottom\n")
+		fmt.Fprintf(os.Stderr, "  ctrl+e     Export current data to file\n")
 		fmt.Fprintf(os.Stderr, "  q          Quit\n")
 	}
 	flag.Parse()
@@ -208,11 +210,11 @@ func generateSampleData(n int) *golars.DataFrame {
 		if dept == "Engineering" || dept == "Management" || dept == "Research" {
 			baseSalary *= 1.15
 		}
-		salaries[i] = baseSalary + rand.Float64()*25000.0 - 5000.0
+		salaries[i] = math.Round((baseSalary+rand.Float64()*25000.0-5000.0)*100) / 100
 
 		// Bonus: 15% chance of null
 		if rand.IntN(100) < 85 {
-			bonuses[i] = salaries[i] * (0.02 + rand.Float64()*0.18)
+			bonuses[i] = math.Round(salaries[i]*(0.02+rand.Float64()*0.18)*100) / 100
 			bonusValid[i] = true
 		}
 

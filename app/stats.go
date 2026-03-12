@@ -176,40 +176,57 @@ func renderMiniTable(df *golars.DataFrame, maxWidth int) string {
 	}
 
 	fields := schemaFields(df.Schema())
-	colWidths := make([]int, len(fields))
+
+	// Calculate column widths, only include columns that fit within maxWidth
+	var visibleWidths []int
+	used := 0
 	for i, f := range fields {
-		colWidths[i] = len(f.Name) + 2
+		w := len(f.Name) + 2
 		col := df.ColumnByIndex(i)
 		for j := 0; j < col.Len(); j++ {
 			val := formatCellValue(col, j)
-			if len(val)+2 > colWidths[i] {
-				colWidths[i] = len(val) + 2
+			if len(val)+2 > w {
+				w = len(val) + 2
 			}
 		}
-		colWidths[i] = min(colWidths[i], 14)
+		w = min(w, 14)
+		if used+w > maxWidth {
+			break
+		}
+		visibleWidths = append(visibleWidths, w)
+		used += w
+	}
+
+	if len(visibleWidths) == 0 {
+		return ""
 	}
 
 	var rows []string
 
 	// Header
 	var hdr []string
-	for i, f := range fields {
-		hdr = append(hdr, headerStyle.Width(colWidths[i]).MaxWidth(colWidths[i]).Render(truncate(f.Name, colWidths[i]-2)))
+	for i, w := range visibleWidths {
+		hdr = append(hdr, headerStyle.Width(w).MaxWidth(w).Render(truncate(fields[i].Name, w-2)))
 	}
 	rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, hdr...))
 
 	// Data
 	for r := 0; r < df.Height(); r++ {
 		var cells []string
-		for i := range fields {
+		for i, w := range visibleWidths {
 			col := df.ColumnByIndex(i)
 			val := formatCellValue(col, r)
-			cells = append(cells, cellStyle.Width(colWidths[i]).MaxWidth(colWidths[i]).Render(truncate(val, colWidths[i]-2)))
+			cells = append(cells, cellStyle.Width(w).MaxWidth(w).Render(truncate(val, w-2)))
 		}
 		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, cells...))
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Left, rows...)
+	footer := ""
+	if len(visibleWidths) < len(fields) {
+		footer = "\n" + helpStyle.Render(fmt.Sprintf("  (%d of %d columns shown)", len(visibleWidths), len(fields)))
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left, rows...) + footer
 }
 
 func isNumeric(dt golars.DataType) bool {

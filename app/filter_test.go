@@ -69,7 +69,10 @@ func TestParseFilterExprMethods(t *testing.T) {
 	}{
 		{"is_null", "bonus.is_null", 2},
 		{"is_not_null", "bonus.is_not_null", 3},
-		{"contains", `name.contains("li")`, 2}, // Alice, Charlie
+		{"contains", `name.contains("li")`, 2},          // Alice, Charlie
+		{"matches", `name.matches("^[A-C]")`, 3},        // Alice, Bob, Charlie
+		{"startswith", `name.startswith("Al")`, 1},       // Alice
+		{"endswith", `name.endswith("e")`, 3},            // Alice, Charlie, Eve
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

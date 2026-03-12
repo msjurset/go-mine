@@ -43,12 +43,15 @@ type Model struct {
 	filterView  FilterModel
 	sqlView     SQLModel
 	colInfoView ColInfoModel
+	exportView  ExportModel
 
 	filterText string
 	err        error
 }
 
 func NewModel(df *golars.DataFrame, fileName string) Model {
+	em := NewExportModel()
+	em.SetDataFrame(df)
 	return Model{
 		originalDF:  df,
 		currentDF:   df,
@@ -59,6 +62,7 @@ func NewModel(df *golars.DataFrame, fileName string) Model {
 		filterView:  NewFilterModel(df),
 		sqlView:     NewSQLModel(df, fileName),
 		colInfoView: NewColInfoModel(df),
+		exportView:  em,
 	}
 }
 
@@ -83,6 +87,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Global quit
 		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
+		}
+
+		// Export overlay handles its own keys
+		if m.exportView.Active() {
+			var cmd tea.Cmd
+			m.exportView, cmd = m.exportView.Update(msg)
+			return m, cmd
+		}
+
+		// Export trigger — works from any view when not in text input
+		if msg.String() == "ctrl+e" && !m.isInputActive() {
+			m.exportView.SetDataFrame(m.currentDF)
+			m.exportView.width = m.width
+			cmd := m.exportView.Open()
+			return m, cmd
 		}
 
 		// Help toggle — works everywhere
@@ -163,11 +182,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.statsView.SetDataFrame(m.originalDF)
 		m.colInfoView.SetDataFrame(m.originalDF)
 		m.sqlView.SetDataFrame(m.originalDF, m.fileName)
-		return m, nil
-
-	case SQLResultMsg:
-		m.sqlView.result = msg.DF
-		m.sqlView.err = nil
+		m.mode = ModeTable
 		return m, nil
 
 	case ErrorMsg:
@@ -203,7 +218,9 @@ func (m Model) View() string {
 	b.WriteString(m.renderTabs())
 	b.WriteString("\n")
 
-	if m.showHelp {
+	if m.exportView.Active() {
+		b.WriteString(m.exportView.View())
+	} else if m.showHelp {
 		b.WriteString(m.renderHelp())
 	} else {
 		// Active view content
@@ -250,7 +267,7 @@ func (m Model) renderStatusBar() string {
 		left += fmt.Sprintf(" │ filter: %s", m.filterText)
 	}
 
-	right := " q:quit  tab:switch  ?:help "
+	right := " q:quit  tab:switch  ctrl+e:export  ?:help "
 
 	leftRendered := statusBarStyle.Render(left)
 	rightRendered := statusBarStyle.Render(right)
@@ -275,6 +292,7 @@ func (m Model) renderHelp() string {
 			keys: [][2]string{
 				{"1-5", "Switch to view: Table, Stats, Filter, SQL, Columns"},
 				{"tab / shift+tab", "Cycle through views"},
+				{"ctrl+e", "Export current data to file"},
 				{"q / ctrl+c", "Quit"},
 				{"?", "Toggle this help"},
 			},
