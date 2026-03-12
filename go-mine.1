@@ -1,0 +1,163 @@
+.TH GO-MINE 1 "March 2026" "version 1.0.0" "User Commands"
+.SH NAME
+go-mine \- interactive terminal data explorer for CSV, TSV, Parquet, and JSON files
+.SH SYNOPSIS
+.B go-mine
+[\fIOPTIONS\fR]
+.I file
+.br
+.B go-mine
+.B \-generate
+[\fB\-rows\fR \fIN\fR]
+.br
+.B go-mine
+.B \-completion
+.I shell
+.SH DESCRIPTION
+.B go-mine
+is a terminal-based interactive data explorer built on the golars DataFrame
+library. It loads tabular data from CSV, TSV, Parquet, or JSON files and
+presents it in a full-screen TUI with five views: Table, Stats, Filter, SQL,
+and Columns.
+.PP
+The Table view displays paginated data with vim-style navigation, column
+sorting, and a row detail overlay. The Stats view shows per-column statistics
+including count, nulls, unique values, mean, standard deviation, min, max, and
+distribution histograms for numeric columns. The Filter view allows filtering
+rows with expressions like \fBage > 30 AND city == "Seattle"\fR. The SQL view
+provides a full SQL query interface using golars SQLContext. The Columns view
+shows detailed metadata and sample values for every column.
+.PP
+If no file is given, the \fB\-generate\fR flag can create sample employee data
+for exploration and demonstration.
+.SH OPTIONS
+.TP
+.BR \-generate
+Generate sample employee data instead of loading a file. Produces 10,000 rows
+by default with 20 columns covering names, emails, departments, salaries, and
+more.
+.TP
+.BR \-rows " \fIN\fR"
+Number of rows to generate when used with \fB\-generate\fR. Default: 10000.
+.TP
+.BR \-info
+Print a data summary (shape, schema, head, describe) to stdout and exit without
+launching the interactive TUI.
+.TP
+.BR \-version
+Print version and exit.
+.TP
+.BR \-completion " \fISHELL\fR"
+Print shell completion script to stdout and exit. Supported shells:
+\fBzsh\fR, \fBbash\fR.
+.TP
+.BR \-h ", " \-help
+Show help message and exit.
+.SH INTERACTIVE KEYS
+.SS Navigation
+.TP
+.B 1\-5
+Switch to view: Table, Stats, Filter, SQL, Columns.
+.TP
+.B tab / shift+tab
+Cycle through views.
+.TP
+.B q / ctrl+c
+Quit.
+.TP
+.B ?
+Toggle help overlay.
+.SS Table View
+.TP
+.B j/k or up/down
+Move cursor up/down.
+.TP
+.B h/l or left/right
+Scroll columns left/right.
+.TP
+.B enter
+Open row detail overlay.
+.TP
+.B pgup/pgdn or ctrl+u/ctrl+d
+Page up/down.
+.TP
+.B g / G
+Jump to first/last page.
+.TP
+.B s
+Sort by current column (cycles: ascending, descending, none).
+.TP
+.B S
+Clear sort.
+.SS Filter View
+.TP
+.B enter
+Apply filter expression.
+.TP
+.B ctrl+r
+Clear filter and restore full dataset.
+.TP
+.B up/down
+Browse filter history.
+.TP
+.B esc
+Unfocus input.
+.SS SQL View
+.TP
+.B enter
+Execute SQL query.
+.TP
+.B ctrl+l
+Clear result.
+.TP
+.B up/down
+Browse query history.
+.TP
+.B esc
+Unfocus input.
+.SH FILTER SYNTAX
+Filters use a simple expression language:
+.PP
+.RS
+column > 42
+.br
+column == "text"
+.br
+column >= 10 AND column <= 100
+.br
+column.is_null
+.br
+column.is_not_null
+.br
+column.contains("substr")
+.RE
+.SH EXAMPLES
+.TP
+.B go-mine data.csv
+Open a CSV file in the interactive explorer.
+.TP
+.B go-mine sales.parquet
+Explore a Parquet file.
+.TP
+.B go-mine records.tsv
+Open a tab-separated file.
+.TP
+.B go-mine events.json
+Explore a JSON file.
+.TP
+.B go-mine -generate -rows 50000
+Generate 50,000 rows of sample data and explore interactively.
+.TP
+.B go-mine -info data.csv
+Print schema and summary statistics to stdout without launching the TUI.
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+An error occurred (unsupported file type, file read error, TUI error).
+.SH AUTHOR
+Mark Sjurseth
+.SH COPYRIGHT
+Copyright (c) 2026. MIT License.

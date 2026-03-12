@@ -1,0 +1,14 @@
+#compdef go-mine
+
+# Zsh completion script for go-mine
+# Install: cp _go-mine ~/.oh-my-zsh/custom/completions/
+#   — or — go-mine -completion zsh > /path/to/completions/_go-mine
+
+_arguments -s \
+  '(-h -help)'{-h,-help}'[Show help message]' \
+  '-version[Print version and exit]' \
+  '-completion[Print shell completion script]:shell:(zsh bash)' \
+  '-generate[Generate sample data instead of loading a file]' \
+  '-rows[Number of rows to generate (with -generate)]:rows:' \
+  '-info[Print data summary to stdout and exit]' \
+  '*:input file:_files -g "*.{csv,tsv,parquet,json}"'
