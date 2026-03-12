@@ -286,8 +286,23 @@ func (m TableModel) renderRowDetail() string {
 		}
 	}
 
-	// Build the detail lines
+	// Size the box — use up to 80% of terminal, min 50
+	boxWidth := min(m.width*4/5, m.width-8)
+	if boxWidth < 50 {
+		boxWidth = 50
+	}
+
+	// Available width for the value column (inside box: border + padding eats ~6 chars)
+	prefixWidth := maxName + 1 + 2 + 7 // "  name  " + space + "type  " + space
+	innerWidth := boxWidth - 6          // subtract border (2) + padding (2*2)
+	valWidth := innerWidth - prefixWidth
+	if valWidth < 10 {
+		valWidth = 10
+	}
+
+	// Build the detail lines, wrapping long values
 	title := fmt.Sprintf(" Row %d of %d ", absRowIdx+1, m.sortedDF.Height())
+	indent := strings.Repeat(" ", prefixWidth)
 	var lines []string
 	for _, f := range fields {
 		col := getColumn(m.sortedDF, f.Name)
@@ -301,9 +316,14 @@ func (m TableModel) renderRowDetail() string {
 		if col.IsNull(absRowIdx) {
 			valStyle = nullStyle
 		}
-		valRendered := valStyle.Render(val)
 
-		lines = append(lines, label+" "+typeTag+" "+valRendered)
+		// Wrap value into chunks that fit the available width
+		wrapped := wrapText(val, valWidth)
+		firstLine := label + " " + typeTag + " " + valStyle.Render(wrapped[0])
+		lines = append(lines, firstLine)
+		for _, cont := range wrapped[1:] {
+			lines = append(lines, indent+valStyle.Render(cont))
+		}
 	}
 
 	// Apply scroll within the detail box
@@ -336,12 +356,6 @@ func (m TableModel) renderRowDetail() string {
 
 	body := visibleContent + "\n\n" + footer
 
-	// Size the box
-	boxWidth := min(m.width-8, maxName+40)
-	if boxWidth < 40 {
-		boxWidth = 40
-	}
-
 	box := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(colorPrimary).
@@ -360,21 +374,18 @@ func (m TableModel) renderRowDetail() string {
 	// Place title over the top border
 	boxLines := strings.Split(box, "\n")
 	if len(boxLines) > 0 {
-		topBorder := boxLines[0]
-		// Insert title into the top border, offset a couple chars in
+		borderWidth := lipgloss.Width(boxLines[0])
 		titleWidth := lipgloss.Width(titleRendered)
-		borderWidth := lipgloss.Width(topBorder)
 		if titleWidth+4 < borderWidth {
-			runes := []rune(topBorder)
-			titleRunes := []rune(titleRendered)
-			// Overwrite starting at position 3
-			pos := 3
-			for i, r := range titleRunes {
-				if pos+i < len(runes) {
-					runes[pos+i] = r
-				}
+			borderStyle := lipgloss.NewStyle().Foreground(colorPrimary)
+			leadPad := 2 // chars before title
+			trailLen := borderWidth - leadPad - titleWidth - 2 // -2 for ╭ and ╮
+			if trailLen < 0 {
+				trailLen = 0
 			}
-			boxLines[0] = string(runes)
+			boxLines[0] = borderStyle.Render("╭"+strings.Repeat("─", leadPad)) +
+				titleRendered +
+				borderStyle.Render(strings.Repeat("─", trailLen)+"╮")
 		}
 		box = strings.Join(boxLines, "\n")
 	}
@@ -582,6 +593,33 @@ func shortTypeName(dt golars.DataType) string {
 	default:
 		return "?"
 	}
+}
+
+// wrapText splits a string into lines of at most maxWidth characters.
+// It tries to break at spaces when possible.
+func wrapText(s string, maxWidth int) []string {
+	if maxWidth <= 0 {
+		maxWidth = 1
+	}
+	if len(s) <= maxWidth {
+		return []string{s}
+	}
+
+	var lines []string
+	for len(s) > 0 {
+		if len(s) <= maxWidth {
+			lines = append(lines, s)
+			break
+		}
+		// Try to break at a space
+		cut := maxWidth
+		if idx := strings.LastIndex(s[:cut], " "); idx > 0 {
+			cut = idx
+		}
+		lines = append(lines, s[:cut])
+		s = strings.TrimLeft(s[cut:], " ")
+	}
+	return lines
 }
 
 func truncate(s string, maxLen int) string {
