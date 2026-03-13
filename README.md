@@ -5,13 +5,15 @@ Interactive terminal data explorer for CSV, TSV, Parquet, and JSON files. Built 
 ## Features
 
 - Load and explore CSV, TSV, Parquet, and JSON files
-- Five interactive views: Table, Stats, Filter, SQL, and Columns
+- Six interactive views: Table, Stats, Filter, SQL, Columns, and JQ
 - Paginated table with vim-style navigation and column sorting
 - Per-column statistics with distribution histograms for numeric data
 - Filter rows with expressions (`age > 30 AND city == "Seattle"`)
 - Regex matching (`name.matches("^A.*")`), startswith, endswith
 - Export filtered data to CSV, Parquet, or JSON
 - SQL query interface with full SELECT/WHERE/GROUP BY/ORDER BY support and interactive results table
+- JQ query view with syntax-highlighted, collapsible JSON tree and tree/table toggle (powered by [gojq](https://github.com/itchyny/gojq))
+- Context-aware autocomplete in Filter, SQL, and JQ input fields
 - Column detail view with type info, null counts, unique values, and samples
 - Row detail overlay for inspecting individual records
 - Vim-style `/` search with regex support and match highlighting across all views
@@ -46,14 +48,14 @@ go-mine -generate [-rows N]
 
 | Key | Action |
 |-----|--------|
-| `1`-`5` / `tab` | Switch views: Table, Stats, Filter, SQL, Columns |
+| `1`-`6` / `tab` | Switch views: Table, Stats, Filter, SQL, Columns, JQ |
 | `j`/`k` or `↑`/`↓` | Navigate rows / select column |
 | `h`/`l` or `←`/`→` | Scroll columns |
 | `s` | Sort by current column (asc → desc → none) |
 | `S` | Clear sort |
 | `w` | Toggle float display (wide/compact) |
 | `enter` / `space` | Open row detail / apply filter (blank clears) / execute SQL |
-| `esc` | Toggle between SQL input and result table navigation |
+| `esc` | Toggle between query input and result navigation (SQL/JQ) |
 | `pgup`/`pgdn` / `ctrl+b`/`ctrl+f` | Page through data |
 | `ctrl+u`/`ctrl+d` or `K`/`J` | Half-page up/down |
 | `g`/`G` | Jump to top/bottom |

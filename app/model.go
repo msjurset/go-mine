@@ -18,9 +18,10 @@ const (
 	ModeFilter
 	ModeSQL
 	ModeColInfo
+	ModeJQ
 )
 
-var modeNames = []string{"Table", "Stats", "Filter", "SQL", "Columns"}
+var modeNames = []string{"Table", "Stats", "Filter", "SQL", "Columns", "JQ"}
 
 // Messages
 type FilterAppliedMsg struct{ DF *golars.DataFrame }
@@ -31,6 +32,7 @@ type ErrorMsg struct{ Err error }
 type Model struct {
 	originalDF *golars.DataFrame
 	currentDF  *golars.DataFrame
+	RawJSON    []interface{} // raw nested JSON for JQ view (exported for main.go)
 	fileName   string
 	mode       Mode
 	width      int
@@ -43,6 +45,7 @@ type Model struct {
 	filterView  FilterModel
 	sqlView     SQLModel
 	colInfoView ColInfoModel
+	jqView      JQModel
 	exportView  ExportModel
 	searchView  SearchModel
 
@@ -63,9 +66,18 @@ func NewModel(df *golars.DataFrame, fileName string) Model {
 		filterView:  NewFilterModel(df),
 		sqlView:     NewSQLModel(df, fileName),
 		colInfoView: NewColInfoModel(df),
+		jqView:      NewJQModel(df),
 		exportView:  em,
 		searchView:  NewSearchModel(),
 	}
+}
+
+// SetRawJSON provides raw (potentially nested) JSON data for the JQ view.
+// When set, the JQ view operates on this data directly instead of converting
+// the flattened DataFrame, preserving nested structure for expand/collapse.
+func (m *Model) SetRawJSON(raw []interface{}) {
+	m.RawJSON = raw
+	m.jqView.SetRawJSON(raw)
 }
 
 func (m Model) Init() tea.Cmd {
@@ -83,6 +95,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.filterView.SetSize(m.width, contentHeight)
 		m.sqlView.SetSize(m.width, contentHeight)
 		m.colInfoView.SetSize(m.width, contentHeight)
+		m.jqView.SetSize(m.width, contentHeight)
 		m.searchView.width = m.width
 		return m, nil
 
@@ -186,6 +199,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "5":
 				m.mode = ModeColInfo
 				return m, nil
+			case "6":
+				m.mode = ModeJQ
+				m.jqView.Focus()
+				return m, textinput.Blink
 			case "tab":
 				m.mode = (m.mode + 1) % Mode(len(modeNames))
 				if m.mode == ModeFilter {
@@ -194,6 +211,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				if m.mode == ModeSQL {
 					m.sqlView.Focus()
+					return m, textinput.Blink
+				}
+				if m.mode == ModeJQ {
+					m.jqView.Focus()
 					return m, textinput.Blink
 				}
 				return m, nil
@@ -205,6 +226,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				if m.mode == ModeSQL {
 					m.sqlView.Focus()
+					return m, textinput.Blink
+				}
+				if m.mode == ModeJQ {
+					m.jqView.Focus()
 					return m, textinput.Blink
 				}
 				return m, nil
@@ -219,7 +244,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.statsView.SetDataFrame(msg.DF)
 		m.colInfoView.SetDataFrame(msg.DF)
 		m.sqlView.SetDataFrame(msg.DF, m.fileName)
-		m.mode = ModeTable
+		m.jqView.SetDataFrame(msg.DF)
 		return m, nil
 
 	case FilterClearedMsg:
@@ -230,7 +255,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.statsView.SetDataFrame(m.originalDF)
 		m.colInfoView.SetDataFrame(m.originalDF)
 		m.sqlView.SetDataFrame(m.originalDF, m.fileName)
-		m.mode = ModeTable
+		m.jqView.SetDataFrame(m.originalDF)
 		return m, nil
 
 	case ErrorMsg:
@@ -251,6 +276,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.sqlView, cmd = m.sqlView.Update(msg)
 	case ModeColInfo:
 		m.colInfoView, cmd = m.colInfoView.Update(msg)
+	case ModeJQ:
+		m.jqView, cmd = m.jqView.Update(msg)
 	}
 	return m, cmd
 }
@@ -284,6 +311,8 @@ func (m Model) View() string {
 			viewContent = m.sqlView.View()
 		case ModeColInfo:
 			viewContent = m.colInfoView.View()
+		case ModeJQ:
+			viewContent = m.jqView.View()
 		}
 		if m.searchView.Active() {
 			activeLine := m.activeMatchLine()
@@ -349,7 +378,7 @@ func (m Model) renderHelp() string {
 		{
 			header: "Navigation",
 			keys: [][2]string{
-				{"1-5", "Switch to view: Table, Stats, Filter, SQL, Columns"},
+				{"1-6", "Switch to view: Table, Stats, Filter, SQL, Columns, JQ"},
 				{"tab / shift+tab", "Cycle through views"},
 				{"ctrl+e", "Export current data to file"},
 				{"q / ctrl+c", "Quit"},
@@ -385,8 +414,10 @@ func (m Model) renderHelp() string {
 			keys: [][2]string{
 				{"enter", "Apply filter expression"},
 				{"ctrl+r", "Clear filter (restore full dataset)"},
-				{"up / down", "Browse filter history"},
-				{"esc", "Unfocus input"},
+				{"tab", "Accept autocomplete suggestion"},
+				{"ctrl+n / ctrl+p", "Navigate suggestions"},
+				{"up / down", "Browse filter history (or navigate suggestions)"},
+				{"esc", "Dismiss suggestions / unfocus input"},
 			},
 		},
 		{
@@ -394,8 +425,26 @@ func (m Model) renderHelp() string {
 			keys: [][2]string{
 				{"enter", "Execute SQL query"},
 				{"ctrl+l", "Clear result"},
-				{"up / down", "Browse query history"},
-				{"esc", "Unfocus input"},
+				{"tab", "Accept autocomplete suggestion"},
+				{"ctrl+n / ctrl+p", "Navigate suggestions"},
+				{"up / down", "Browse query history (or navigate suggestions)"},
+				{"esc", "Dismiss suggestions / unfocus input"},
+			},
+		},
+		{
+			header: "JQ View",
+			keys: [][2]string{
+				{"enter", "Execute query / toggle expand-collapse"},
+				{"ctrl+l", "Clear result"},
+				{"tab", "Accept autocomplete suggestion"},
+				{"ctrl+n / ctrl+p", "Navigate suggestions"},
+				{"up / down", "Browse query history (or navigate suggestions)"},
+				{"esc", "Toggle between input and results"},
+				{"j/k", "Navigate JSON tree"},
+				{"space / enter", "Toggle expand/collapse at cursor"},
+				{"E", "Expand subtree at cursor"},
+				{"C", "Collapse subtree at cursor"},
+				{"t", "Toggle tree/table view (when results are tabular)"},
 			},
 		},
 		{
@@ -436,6 +485,10 @@ func (m Model) displayedDF() *golars.DataFrame {
 	case ModeSQL:
 		if m.sqlView.result != nil {
 			return m.sqlView.table.sortedDF
+		}
+	case ModeJQ:
+		if m.jqView.result != nil {
+			return m.jqView.table.sortedDF
 		}
 	}
 	return m.currentDF
@@ -509,6 +562,8 @@ func (m Model) isInputActive() bool {
 		return m.filterView.input.Focused()
 	case ModeSQL:
 		return m.sqlView.input.Focused()
+	case ModeJQ:
+		return m.jqView.input.Focused()
 	}
 	return false
 }

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"math"
@@ -31,7 +33,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Flags:\n")
 		flag.PrintDefaults()
 		fmt.Fprintf(os.Stderr, "\nInteractive keys:\n")
-		fmt.Fprintf(os.Stderr, "  1-5/tab    Switch views: Table, Stats, Filter, SQL, Columns\n")
+		fmt.Fprintf(os.Stderr, "  1-6/tab    Switch views: Table, Stats, Filter, SQL, Columns, JQ\n")
 		fmt.Fprintf(os.Stderr, "  j/k ↑↓     Navigate rows\n")
 		fmt.Fprintf(os.Stderr, "  h/l ←→     Scroll columns\n")
 		fmt.Fprintf(os.Stderr, "  s          Sort by current column (cycles: asc → desc → none)\n")
@@ -61,6 +63,7 @@ func main() {
 	}
 
 	var df *golars.DataFrame
+	var rawJSON []interface{} // preserved raw JSON for nested data in JQ view
 	var err error
 	fileName := "generated"
 
@@ -91,7 +94,11 @@ func main() {
 		case ".parquet":
 			df, err = golars.ReadParquet(path)
 		case ".json":
-			df, err = golars.ReadJSON(path)
+			df, err = readJSON(path)
+			if err == nil {
+				// Also parse raw JSON to preserve nested structure for JQ view
+				rawJSON, _ = readRawJSON(path)
+			}
 		default:
 			fmt.Fprintf(os.Stderr, "Unsupported file type: %s\nSupported: .csv, .tsv, .parquet, .json\n", ext)
 			os.Exit(1)
@@ -109,11 +116,64 @@ func main() {
 	}
 
 	model := app.NewModel(df, fileName)
+	if rawJSON != nil {
+		model.SetRawJSON(rawJSON)
+	}
 	p := tea.NewProgram(model, tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+// readRawJSON parses a JSON file into raw Go values, preserving all nesting.
+// Returns a slice of interface{} (one per top-level array element, or a single
+// element for a top-level object).
+func readRawJSON(path string) ([]interface{}, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	trimmed := bytes.TrimLeft(data, " \t\r\n")
+	if len(trimmed) == 0 {
+		return nil, fmt.Errorf("empty JSON file")
+	}
+
+	if trimmed[0] == '[' {
+		var arr []interface{}
+		if err := json.Unmarshal(data, &arr); err != nil {
+			return nil, err
+		}
+		return arr, nil
+	}
+
+	// Single object — wrap in array
+	var obj interface{}
+	if err := json.Unmarshal(data, &obj); err != nil {
+		return nil, err
+	}
+	return []interface{}{obj}, nil
+}
+
+// readJSON loads a JSON file, wrapping single objects in an array so that
+// non-array JSON (e.g. API discovery docs) can be explored as a one-row table.
+func readJSON(path string) (*golars.DataFrame, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	// Find the first non-whitespace byte to detect object vs array.
+	trimmed := bytes.TrimLeft(data, " \t\r\n")
+	if len(trimmed) > 0 && trimmed[0] == '{' {
+		// Wrap the single object in an array.
+		wrapped := make([]byte, 0, len(data)+2)
+		wrapped = append(wrapped, '[')
+		wrapped = append(wrapped, data...)
+		wrapped = append(wrapped, ']')
+		data = wrapped
+	}
+	return golars.ReadJSONFromReader(bytes.NewReader(data))
 }
 
 func generateSampleData(n int) *golars.DataFrame {

@@ -21,6 +21,7 @@ type SQLModel struct {
 	err     error
 	width   int
 	height  int
+	ac      Autocomplete
 }
 
 func NewSQLModel(df *golars.DataFrame, fileName string) SQLModel {
@@ -32,18 +33,35 @@ func NewSQLModel(df *golars.DataFrame, fileName string) SQLModel {
 	ctx := golars.NewSQLContext()
 	ctx.Register("data", df)
 
-	// Also register with a cleaned-up filename
 	cleanName := cleanFileName(fileName)
 	if cleanName != "data" && cleanName != "" {
 		ctx.Register(cleanName, df)
 	}
+
+	ac := NewAutocomplete()
+	ac.SetCorpus(buildSQLCorpus(df, fileName))
 
 	return SQLModel{
 		df:      df,
 		sqlCtx:  ctx,
 		input:   ti,
 		histIdx: -1,
+		ac:      ac,
 	}
+}
+
+func buildSQLCorpus(df *golars.DataFrame, fileName string) []Suggestion {
+	fields := schemaFields(df.Schema())
+	colNames := make([]string, len(fields))
+	for i, f := range fields {
+		colNames[i] = f.Name
+	}
+	tableNames := []string{"data"}
+	cleanName := cleanFileName(fileName)
+	if cleanName != "data" && cleanName != "" {
+		tableNames = append(tableNames, cleanName)
+	}
+	return BuildSQLCorpus(colNames, tableNames)
 }
 
 func (m *SQLModel) Focus() {
@@ -62,39 +80,70 @@ func (m *SQLModel) SetDataFrame(df *golars.DataFrame, fileName string) {
 
 	m.result = nil
 	m.err = nil
+	m.ac.SetCorpus(buildSQLCorpus(df, fileName))
 }
 
 func (m *SQLModel) SetSize(w, h int) {
 	m.width = w
 	m.height = h
 	m.input.Width = w - 20
-	// Result table gets the space below the input/help area (about 8 lines)
 	m.table.SetSize(w, max(1, h-8))
 }
 
 func (m SQLModel) Update(msg tea.Msg) (SQLModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// Autocomplete interaction when visible and input focused
+		if m.input.Focused() && m.ac.Visible() {
+			switch msg.String() {
+			case "tab":
+				newText, newCursor := m.ac.Accept(m.input.Value(), m.input.Position())
+				m.input.SetValue(newText)
+				m.input.SetCursor(newCursor)
+				return m, nil
+			case "enter":
+				newText, newCursor := m.ac.Accept(m.input.Value(), m.input.Position())
+				m.input.SetValue(newText)
+				m.input.SetCursor(newCursor)
+				return m, nil
+			case "ctrl+n":
+				m.ac.Next()
+				return m, nil
+			case "ctrl+p":
+				m.ac.Prev()
+				return m, nil
+			case "esc":
+				m.ac.Dismiss()
+				return m, nil
+			}
+		}
+
 		switch msg.String() {
 		case "enter":
 			if m.input.Focused() {
+				m.ac.Dismiss()
 				return m.executeQuery()
 			}
 		case "esc":
 			if m.input.Focused() {
+				m.ac.Dismiss()
 				m.input.Blur()
 				return m, nil
 			}
-			// Re-focus input from result table
 			m.input.Focus()
 			return m, textinput.Blink
 		case "ctrl+l":
 			m.result = nil
 			m.err = nil
+			m.ac.Dismiss()
 			m.input.Focus()
 			return m, textinput.Blink
 		case "up":
 			if m.input.Focused() {
+				if m.ac.Visible() {
+					m.ac.Prev()
+					return m, nil
+				}
 				if len(m.history) > 0 {
 					if m.histIdx < len(m.history)-1 {
 						m.histIdx++
@@ -105,6 +154,10 @@ func (m SQLModel) Update(msg tea.Msg) (SQLModel, tea.Cmd) {
 			}
 		case "down":
 			if m.input.Focused() {
+				if m.ac.Visible() {
+					m.ac.Next()
+					return m, nil
+				}
 				if m.histIdx > 0 {
 					m.histIdx--
 					m.input.SetValue(m.history[len(m.history)-1-m.histIdx])
@@ -124,8 +177,16 @@ func (m SQLModel) Update(msg tea.Msg) (SQLModel, tea.Cmd) {
 		}
 	}
 
+	prevValue := m.input.Value()
 	var cmd tea.Cmd
 	m.input, cmd = m.input.Update(msg)
+
+	// Only re-trigger autocomplete when the text actually changed
+	if m.input.Focused() && m.input.Value() != prevValue {
+		m.ac.ClearJustAccepted()
+		m.ac.Update(m.input.Value(), m.input.Position())
+	}
+
 	return m, cmd
 }
 
@@ -146,7 +207,6 @@ func (m SQLModel) executeQuery() (SQLModel, tea.Cmd) {
 		m.table.SetSize(m.width, max(1, m.height-8))
 		m.history = append(m.history, query)
 		m.histIdx = -1
-		// Blur input so user can navigate results immediately
 		m.input.Blur()
 	}
 	return m, nil
@@ -157,6 +217,11 @@ func (m SQLModel) View() string {
 
 	b.WriteString(statHeaderStyle.Render("SQL Query") + "\n\n")
 	b.WriteString(promptStyle.Render("  SQL> ") + m.input.View() + "\n")
+
+	// Show autocomplete dropdown
+	if m.input.Focused() && m.ac.Visible() {
+		b.WriteString(m.ac.View() + "\n")
+	}
 
 	if m.err != nil {
 		b.WriteString("\n" + errorStyle.Render(fmt.Sprintf("  Error: %v", m.err)) + "\n")
@@ -173,9 +238,8 @@ func (m SQLModel) View() string {
 		b.WriteString("\n")
 		b.WriteString(m.table.View())
 	} else if m.err == nil {
-		// Show help and schema when no results
 		b.WriteString("\n")
-		b.WriteString(helpStyle.Render("  Table name: \"data\" │ enter:execute  ctrl+l:clear  ↑↓:history  esc:unfocus") + "\n")
+		b.WriteString(helpStyle.Render("  Table name: \"data\" │ enter:execute  ctrl+l:clear  ↑↓:history  tab:complete") + "\n")
 		b.WriteString(helpStyle.Render("  Example queries:") + "\n")
 		b.WriteString(helpStyle.Render("    SELECT * FROM data LIMIT 10") + "\n")
 		b.WriteString(helpStyle.Render("    SELECT col1, AVG(col2) FROM data GROUP BY col1") + "\n")
@@ -188,5 +252,5 @@ func (m SQLModel) View() string {
 		}
 	}
 
-	return lipgloss.NewStyle().Width(m.width).Render(b.String())
+	return lipgloss.NewStyle().Width(m.width).MaxHeight(m.height).Render(b.String())
 }

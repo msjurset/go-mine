@@ -12,14 +12,16 @@ import (
 )
 
 type FilterModel struct {
-	df      *golars.DataFrame
-	input   textinput.Model
-	history []string
-	histIdx int
-	err     error
-	preview *golars.DataFrame
-	width   int
-	height  int
+	df          *golars.DataFrame
+	input       textinput.Model
+	history     []string
+	histIdx     int
+	err         error
+	preview     *golars.DataFrame
+	matchedRows int // total rows matched by last filter
+	width       int
+	height      int
+	ac          Autocomplete
 }
 
 func NewFilterModel(df *golars.DataFrame) FilterModel {
@@ -28,11 +30,26 @@ func NewFilterModel(df *golars.DataFrame) FilterModel {
 	ti.CharLimit = 256
 	ti.Width = 80
 
+	ac := NewAutocomplete()
+	ac.SetCorpus(buildFilterCorpus(df))
+
 	return FilterModel{
 		df:      df,
 		input:   ti,
 		histIdx: -1,
+		ac:      ac,
 	}
+}
+
+func buildFilterCorpus(df *golars.DataFrame) []Suggestion {
+	fields := schemaFields(df.Schema())
+	colNames := make([]string, len(fields))
+	colTypes := make([]string, len(fields))
+	for i, f := range fields {
+		colNames[i] = f.Name
+		colTypes[i] = shortTypeName(f.Dtype)
+	}
+	return BuildFilterCorpus(colNames, colTypes)
 }
 
 func (m *FilterModel) Focus() {
@@ -45,21 +62,58 @@ func (m *FilterModel) SetSize(w, h int) {
 	m.input.Width = w - 20
 }
 
+func (m *FilterModel) SetDataFrame(df *golars.DataFrame) {
+	m.df = df
+	m.ac.SetCorpus(buildFilterCorpus(df))
+}
+
 func (m FilterModel) Update(msg tea.Msg) (FilterModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// Autocomplete interaction when visible and input focused
+		if m.input.Focused() && m.ac.Visible() {
+			switch msg.String() {
+			case "tab":
+				newText, newCursor := m.ac.Accept(m.input.Value(), m.input.Position())
+				m.input.SetValue(newText)
+				m.input.SetCursor(newCursor)
+				return m, nil
+			case "enter":
+				newText, newCursor := m.ac.Accept(m.input.Value(), m.input.Position())
+				m.input.SetValue(newText)
+				m.input.SetCursor(newCursor)
+				return m, nil
+			case "ctrl+n":
+				m.ac.Next()
+				return m, nil
+			case "ctrl+p":
+				m.ac.Prev()
+				return m, nil
+			case "esc":
+				m.ac.Dismiss()
+				return m, nil
+			}
+		}
+
 		switch msg.String() {
 		case "enter":
+			m.ac.Dismiss()
 			return m.applyFilter()
 		case "ctrl+r":
 			m.err = nil
 			m.preview = nil
 			m.input.SetValue("")
+			m.ac.Dismiss()
 			return m, func() tea.Msg { return FilterClearedMsg{} }
 		case "esc":
+			m.ac.Dismiss()
 			m.input.Blur()
 			return m, nil
 		case "up":
+			if m.ac.Visible() {
+				m.ac.Prev()
+				return m, nil
+			}
 			if len(m.history) > 0 {
 				if m.histIdx < len(m.history)-1 {
 					m.histIdx++
@@ -68,6 +122,10 @@ func (m FilterModel) Update(msg tea.Msg) (FilterModel, tea.Cmd) {
 			}
 			return m, nil
 		case "down":
+			if m.ac.Visible() {
+				m.ac.Next()
+				return m, nil
+			}
 			if m.histIdx > 0 {
 				m.histIdx--
 				m.input.SetValue(m.history[len(m.history)-1-m.histIdx])
@@ -79,8 +137,16 @@ func (m FilterModel) Update(msg tea.Msg) (FilterModel, tea.Cmd) {
 		}
 	}
 
+	prevValue := m.input.Value()
 	var cmd tea.Cmd
 	m.input, cmd = m.input.Update(msg)
+
+	// Only re-trigger autocomplete when the text actually changed
+	if m.input.Focused() && m.input.Value() != prevValue {
+		m.ac.ClearJustAccepted()
+		m.ac.Update(m.input.Value(), m.input.Position())
+	}
+
 	return m, cmd
 }
 
@@ -117,6 +183,7 @@ func (m FilterModel) applyFilter() (FilterModel, tea.Cmd) {
 	m.err = nil
 	m.history = append(m.history, text)
 	m.histIdx = -1
+	m.matchedRows = filtered.Height()
 	m.preview = filtered.Head(5)
 
 	resultDF := filtered
@@ -127,7 +194,14 @@ func (m FilterModel) View() string {
 	var b strings.Builder
 
 	b.WriteString(statHeaderStyle.Render("Filter Data") + "\n\n")
-	b.WriteString(promptStyle.Render("  Filter: ") + m.input.View() + "\n\n")
+	b.WriteString(promptStyle.Render("  Filter: ") + m.input.View() + "\n")
+
+	// Show autocomplete dropdown
+	if m.input.Focused() && m.ac.Visible() {
+		b.WriteString(m.ac.View() + "\n")
+	}
+
+	b.WriteString("\n")
 
 	// Help text
 	b.WriteString(helpStyle.Render("  Syntax examples:") + "\n")
@@ -137,14 +211,16 @@ func (m FilterModel) View() string {
 	b.WriteString(helpStyle.Render("    email.matches(\"^[a-z]+\\\\.s.*@\")            name.startswith(\"Al\")") + "\n")
 	b.WriteString(helpStyle.Render("    city.endswith(\"ton\")                        name.matches(\"^[A-C]\")") + "\n")
 	b.WriteString(helpStyle.Render("  ") + "\n")
-	b.WriteString(helpStyle.Render("  enter:apply  ctrl+r:clear filter  ↑↓:history  esc:unfocus") + "\n\n")
+	b.WriteString(helpStyle.Render("  enter:apply  ctrl+r:clear filter  ↑↓:history  tab:complete  esc:unfocus") + "\n\n")
 
 	if m.err != nil {
 		b.WriteString(errorStyle.Render(fmt.Sprintf("  Error: %v", m.err)) + "\n\n")
 	}
 
 	if m.preview != nil && !m.preview.IsEmpty() {
-		b.WriteString(successStyle.Render(fmt.Sprintf("  Preview (showing %d of matched rows):", m.preview.Height())) + "\n")
+		origRows := m.df.Height()
+		b.WriteString(successStyle.Render(fmt.Sprintf("  Matched %d of %d rows", m.matchedRows, origRows)))
+		b.WriteString(helpStyle.Render(fmt.Sprintf("  (preview: first %d)", m.preview.Height())) + "\n")
 		b.WriteString(renderMiniTable(m.preview, m.width-4))
 	}
 
@@ -164,7 +240,7 @@ func (m FilterModel) View() string {
 	}
 	b.WriteString(helpStyle.Render(colLines))
 
-	return lipgloss.NewStyle().Width(m.width).Render(b.String())
+	return lipgloss.NewStyle().Width(m.width).MaxHeight(m.height).Render(b.String())
 }
 
 // parseFilterExpr parses a simple filter expression string into a golars Expr.
@@ -251,7 +327,6 @@ func parseFilterExpr(text string, df *golars.DataFrame) (golars.Expr, error) {
 }
 
 func splitLogical(text string) ([2]string, string, bool) {
-	// Look for AND or OR (case insensitive) at word boundaries
 	for _, op := range []string{" AND ", " OR "} {
 		idx := strings.Index(strings.ToUpper(text), op)
 		if idx > 0 {

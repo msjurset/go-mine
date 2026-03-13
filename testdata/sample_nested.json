@@ -1,0 +1,471 @@
+[
+  {
+    "id": 1,
+    "name": "Acme Corp",
+    "founded": 2005,
+    "active": true,
+    "headquarters": {
+      "city": "San Francisco",
+      "state": "CA",
+      "country": "US",
+      "coordinates": { "lat": 37.7749, "lng": -122.4194 },
+      "address": {
+        "street": "123 Market St",
+        "suite": "400",
+        "zip": "94105"
+      }
+    },
+    "ceo": {
+      "name": "Alice Chen",
+      "age": 48,
+      "education": { "degree": "MBA", "school": "Stanford", "year": 2002 },
+      "previous_companies": ["Google", "Stripe"]
+    },
+    "departments": [
+      {
+        "name": "Engineering",
+        "head": "Bob Martinez",
+        "budget": 4500000,
+        "headcount": 120,
+        "teams": [
+          { "name": "Backend", "members": 45, "tech_stack": ["Go", "PostgreSQL", "Redis"], "lead": { "name": "Carol Wu", "tenure_years": 6 } },
+          { "name": "Frontend", "members": 30, "tech_stack": ["TypeScript", "React", "GraphQL"], "lead": { "name": "Dan Park", "tenure_years": 3 } },
+          { "name": "Platform", "members": 25, "tech_stack": ["Kubernetes", "Terraform", "AWS"], "lead": { "name": "Eva Singh", "tenure_years": 8 } },
+          { "name": "Data", "members": 20, "tech_stack": ["Python", "Spark", "Airflow"], "lead": { "name": "Frank Liu", "tenure_years": 4 } }
+        ]
+      },
+      {
+        "name": "Sales",
+        "head": "Grace Kim",
+        "budget": 2800000,
+        "headcount": 65,
+        "teams": [
+          { "name": "Enterprise", "members": 25, "tech_stack": ["Salesforce"], "lead": { "name": "Hank Torres", "tenure_years": 5 } },
+          { "name": "SMB", "members": 20, "tech_stack": ["HubSpot"], "lead": { "name": "Irene Patel", "tenure_years": 2 } },
+          { "name": "Partnerships", "members": 20, "tech_stack": null, "lead": { "name": "Jake Ross", "tenure_years": 7 } }
+        ]
+      },
+      {
+        "name": "Marketing",
+        "head": "Karen Obi",
+        "budget": 1500000,
+        "headcount": 30,
+        "teams": [
+          { "name": "Growth", "members": 15, "tech_stack": ["Segment", "Amplitude"], "lead": { "name": "Leo Ruiz", "tenure_years": 3 } },
+          { "name": "Content", "members": 15, "tech_stack": null, "lead": { "name": "Mona Sato", "tenure_years": 1 } }
+        ]
+      }
+    ],
+    "financials": {
+      "revenue": { "2023": 42000000, "2024": 58000000, "2025": 71000000 },
+      "profit_margin": 0.18,
+      "funding_rounds": [
+        { "round": "Series A", "amount": 5000000, "date": "2008-03-15", "lead_investor": "Sequoia Capital" },
+        { "round": "Series B", "amount": 20000000, "date": "2012-07-22", "lead_investor": "Andreessen Horowitz" },
+        { "round": "Series C", "amount": 75000000, "date": "2018-11-01", "lead_investor": "Tiger Global" }
+      ],
+      "quarterly_revenue": [
+        { "quarter": "Q1-2025", "revenue": 16500000, "expenses": 13200000, "net": 3300000 },
+        { "quarter": "Q2-2025", "revenue": 17800000, "expenses": 14100000, "net": 3700000 },
+        { "quarter": "Q3-2025", "revenue": 18200000, "expenses": 14800000, "net": 3400000 },
+        { "quarter": "Q4-2025", "revenue": 18500000, "expenses": 15000000, "net": 3500000 }
+      ]
+    },
+    "products": [
+      {
+        "name": "Acme Cloud",
+        "type": "SaaS",
+        "launched": "2010-06-01",
+        "pricing": { "free_tier": true, "starter": 29, "pro": 99, "enterprise": null },
+        "metrics": { "dau": 85000, "mau": 320000, "churn_rate": 0.032, "nps": 62 }
+      },
+      {
+        "name": "Acme Analytics",
+        "type": "SaaS",
+        "launched": "2019-01-15",
+        "pricing": { "free_tier": false, "starter": 49, "pro": 199, "enterprise": 799 },
+        "metrics": { "dau": 12000, "mau": 45000, "churn_rate": 0.021, "nps": 74 }
+      }
+    ],
+    "tags": ["enterprise", "cloud", "analytics", "series-c"],
+    "metadata": null
+  },
+  {
+    "id": 2,
+    "name": "NovaTech",
+    "founded": 2012,
+    "active": true,
+    "headquarters": {
+      "city": "Austin",
+      "state": "TX",
+      "country": "US",
+      "coordinates": { "lat": 30.2672, "lng": -97.7431 },
+      "address": {
+        "street": "456 Congress Ave",
+        "suite": null,
+        "zip": "78701"
+      }
+    },
+    "ceo": {
+      "name": "Diana Okafor",
+      "age": 39,
+      "education": { "degree": "PhD", "school": "MIT", "year": 2010 },
+      "previous_companies": ["SpaceX", "Tesla"]
+    },
+    "departments": [
+      {
+        "name": "Engineering",
+        "head": "Eli Nakamura",
+        "budget": 8200000,
+        "headcount": 200,
+        "teams": [
+          { "name": "Core Platform", "members": 60, "tech_stack": ["Rust", "C++", "Linux"], "lead": { "name": "Fiona James", "tenure_years": 5 } },
+          { "name": "Embedded", "members": 50, "tech_stack": ["C", "RTOS", "ARM"], "lead": { "name": "George Wen", "tenure_years": 9 } },
+          { "name": "ML/AI", "members": 45, "tech_stack": ["Python", "PyTorch", "CUDA"], "lead": { "name": "Hannah Reeves", "tenure_years": 4 } },
+          { "name": "QA", "members": 25, "tech_stack": ["Selenium", "pytest", "Jenkins"], "lead": { "name": "Ian Yates", "tenure_years": 3 } },
+          { "name": "DevOps", "members": 20, "tech_stack": ["Docker", "Ansible", "GCP"], "lead": { "name": "Jess Morales", "tenure_years": 6 } }
+        ]
+      },
+      {
+        "name": "Research",
+        "head": "Karl Lindqvist",
+        "budget": 3500000,
+        "headcount": 40,
+        "teams": [
+          { "name": "Applied Physics", "members": 15, "tech_stack": ["MATLAB", "COMSOL"], "lead": { "name": "Lara Ngo", "tenure_years": 7 } },
+          { "name": "Materials Science", "members": 15, "tech_stack": ["Python", "LAMMPS"], "lead": { "name": "Max Odom", "tenure_years": 2 } },
+          { "name": "Prototyping", "members": 10, "tech_stack": ["SolidWorks", "3D Printing"], "lead": { "name": "Nina Voss", "tenure_years": 4 } }
+        ]
+      },
+      {
+        "name": "Operations",
+        "head": "Omar Farah",
+        "budget": 1800000,
+        "headcount": 35,
+        "teams": [
+          { "name": "Supply Chain", "members": 20, "tech_stack": ["SAP", "Tableau"], "lead": { "name": "Paula Grant", "tenure_years": 3 } },
+          { "name": "Facilities", "members": 15, "tech_stack": null, "lead": { "name": "Quinn Davis", "tenure_years": 1 } }
+        ]
+      }
+    ],
+    "financials": {
+      "revenue": { "2023": 18000000, "2024": 31000000, "2025": 52000000 },
+      "profit_margin": -0.05,
+      "funding_rounds": [
+        { "round": "Seed", "amount": 2000000, "date": "2012-09-10", "lead_investor": "Y Combinator" },
+        { "round": "Series A", "amount": 12000000, "date": "2015-04-18", "lead_investor": "Founders Fund" },
+        { "round": "Series B", "amount": 45000000, "date": "2020-02-28", "lead_investor": "Softbank" },
+        { "round": "Series C", "amount": 120000000, "date": "2024-06-15", "lead_investor": "Coatue Management" }
+      ],
+      "quarterly_revenue": [
+        { "quarter": "Q1-2025", "revenue": 11000000, "expenses": 12500000, "net": -1500000 },
+        { "quarter": "Q2-2025", "revenue": 12500000, "expenses": 13000000, "net": -500000 },
+        { "quarter": "Q3-2025", "revenue": 13800000, "expenses": 13200000, "net": 600000 },
+        { "quarter": "Q4-2025", "revenue": 14700000, "expenses": 13500000, "net": 1200000 }
+      ]
+    },
+    "products": [
+      {
+        "name": "NovaDrive",
+        "type": "Hardware",
+        "launched": "2017-09-01",
+        "pricing": { "free_tier": false, "starter": null, "pro": null, "enterprise": 25000 },
+        "metrics": { "dau": null, "mau": null, "churn_rate": 0.008, "nps": 81 }
+      },
+      {
+        "name": "NovaOS",
+        "type": "Software",
+        "launched": "2020-03-15",
+        "pricing": { "free_tier": true, "starter": 0, "pro": 499, "enterprise": 2999 },
+        "metrics": { "dau": 5200, "mau": 18000, "churn_rate": 0.015, "nps": 77 }
+      },
+      {
+        "name": "NovaSense",
+        "type": "IoT",
+        "launched": "2023-11-20",
+        "pricing": { "free_tier": false, "starter": 199, "pro": 599, "enterprise": 1499 },
+        "metrics": { "dau": 3100, "mau": 9500, "churn_rate": 0.028, "nps": 68 }
+      }
+    ],
+    "tags": ["hardware", "iot", "deep-tech", "series-c"],
+    "metadata": { "notes": "Strong growth trajectory, approaching profitability" }
+  },
+  {
+    "id": 3,
+    "name": "Verdant Health",
+    "founded": 2018,
+    "active": true,
+    "headquarters": {
+      "city": "Boston",
+      "state": "MA",
+      "country": "US",
+      "coordinates": { "lat": 42.3601, "lng": -71.0589 },
+      "address": {
+        "street": "789 Boylston St",
+        "suite": "1200",
+        "zip": "02116"
+      }
+    },
+    "ceo": {
+      "name": "Raj Kapoor",
+      "age": 44,
+      "education": { "degree": "MD/MBA", "school": "Harvard", "year": 2008 },
+      "previous_companies": ["Pfizer", "23andMe", "Oscar Health"]
+    },
+    "departments": [
+      {
+        "name": "Engineering",
+        "head": "Sara Petrov",
+        "budget": 3200000,
+        "headcount": 55,
+        "teams": [
+          { "name": "Backend", "members": 20, "tech_stack": ["Java", "Spring Boot", "Kafka"], "lead": { "name": "Tom Fischer", "tenure_years": 3 } },
+          { "name": "Mobile", "members": 18, "tech_stack": ["Swift", "Kotlin", "Flutter"], "lead": { "name": "Uma Rajan", "tenure_years": 2 } },
+          { "name": "Security", "members": 10, "tech_stack": ["Vault", "SOC2", "HIPAA"], "lead": { "name": "Victor Hale", "tenure_years": 5 } },
+          { "name": "Infrastructure", "members": 7, "tech_stack": ["AWS", "Terraform", "Datadog"], "lead": { "name": "Wendy Choi", "tenure_years": 1 } }
+        ]
+      },
+      {
+        "name": "Clinical",
+        "head": "Dr. Xavier Reyes",
+        "budget": 2100000,
+        "headcount": 30,
+        "teams": [
+          { "name": "Medical Affairs", "members": 12, "tech_stack": null, "lead": { "name": "Dr. Yara Haddad", "tenure_years": 4 } },
+          { "name": "Clinical Trials", "members": 10, "tech_stack": ["REDCap", "SAS"], "lead": { "name": "Dr. Zach Olsen", "tenure_years": 3 } },
+          { "name": "Compliance", "members": 8, "tech_stack": null, "lead": { "name": "Amy Tran", "tenure_years": 2 } }
+        ]
+      },
+      {
+        "name": "Product",
+        "head": "Ben Goldstein",
+        "budget": 900000,
+        "headcount": 15,
+        "teams": [
+          { "name": "Design", "members": 8, "tech_stack": ["Figma", "Framer"], "lead": { "name": "Chloe Webb", "tenure_years": 2 } },
+          { "name": "PM", "members": 7, "tech_stack": ["Jira", "Notion"], "lead": { "name": "Derek Huang", "tenure_years": 3 } }
+        ]
+      }
+    ],
+    "financials": {
+      "revenue": { "2023": 5200000, "2024": 12800000, "2025": 24000000 },
+      "profit_margin": -0.22,
+      "funding_rounds": [
+        { "round": "Seed", "amount": 3000000, "date": "2018-06-01", "lead_investor": "ARCH Venture Partners" },
+        { "round": "Series A", "amount": 18000000, "date": "2021-01-20", "lead_investor": "a16z Bio" },
+        { "round": "Series B", "amount": 55000000, "date": "2024-03-10", "lead_investor": "General Catalyst" }
+      ],
+      "quarterly_revenue": [
+        { "quarter": "Q1-2025", "revenue": 5000000, "expenses": 6800000, "net": -1800000 },
+        { "quarter": "Q2-2025", "revenue": 5600000, "expenses": 7100000, "net": -1500000 },
+        { "quarter": "Q3-2025", "revenue": 6200000, "expenses": 7200000, "net": -1000000 },
+        { "quarter": "Q4-2025", "revenue": 7200000, "expenses": 7500000, "net": -300000 }
+      ]
+    },
+    "products": [
+      {
+        "name": "Verdant Wellness",
+        "type": "Mobile App",
+        "launched": "2020-08-01",
+        "pricing": { "free_tier": true, "starter": 9, "pro": 29, "enterprise": 199 },
+        "metrics": { "dau": 42000, "mau": 180000, "churn_rate": 0.045, "nps": 58 }
+      },
+      {
+        "name": "Verdant Clinical",
+        "type": "SaaS",
+        "launched": "2022-04-01",
+        "pricing": { "free_tier": false, "starter": null, "pro": null, "enterprise": 5000 },
+        "metrics": { "dau": 2800, "mau": 8500, "churn_rate": 0.012, "nps": 72 }
+      }
+    ],
+    "tags": ["healthtech", "mobile", "clinical", "series-b"],
+    "metadata": { "notes": "HIPAA compliant, FDA 510(k) pending for clinical module" }
+  },
+  {
+    "id": 4,
+    "name": "Cobalt Robotics",
+    "founded": 2016,
+    "active": true,
+    "headquarters": {
+      "city": "Berlin",
+      "state": null,
+      "country": "DE",
+      "coordinates": { "lat": 52.5200, "lng": 13.4050 },
+      "address": {
+        "street": "Friedrichstraße 112",
+        "suite": "3F",
+        "zip": "10117"
+      }
+    },
+    "ceo": {
+      "name": "Lina Bergström",
+      "age": 42,
+      "education": { "degree": "MSc", "school": "ETH Zurich", "year": 2006 },
+      "previous_companies": ["ABB", "Boston Dynamics"]
+    },
+    "departments": [
+      {
+        "name": "Engineering",
+        "head": "Marco Ricci",
+        "budget": 6000000,
+        "headcount": 95,
+        "teams": [
+          { "name": "Robotics", "members": 35, "tech_stack": ["ROS2", "C++", "Python"], "lead": { "name": "Nadia Petrov", "tenure_years": 6 } },
+          { "name": "Computer Vision", "members": 25, "tech_stack": ["OpenCV", "PyTorch", "CUDA"], "lead": { "name": "Oscar Brandt", "tenure_years": 4 } },
+          { "name": "Firmware", "members": 20, "tech_stack": ["C", "FreeRTOS", "STM32"], "lead": { "name": "Petra Kowalski", "tenure_years": 7 } },
+          { "name": "Simulation", "members": 15, "tech_stack": ["Unity", "Gazebo", "Isaac Sim"], "lead": { "name": "Rolf Svensson", "tenure_years": 2 } }
+        ]
+      },
+      {
+        "name": "Manufacturing",
+        "head": "Sabine Keller",
+        "budget": 4500000,
+        "headcount": 80,
+        "teams": [
+          { "name": "Assembly", "members": 40, "tech_stack": null, "lead": { "name": "Thomas Bauer", "tenure_years": 5 } },
+          { "name": "Testing", "members": 25, "tech_stack": ["LabVIEW", "NI DAQ"], "lead": { "name": "Ulrike Meier", "tenure_years": 3 } },
+          { "name": "Procurement", "members": 15, "tech_stack": ["SAP"], "lead": { "name": "Volker Schmidt", "tenure_years": 8 } }
+        ]
+      }
+    ],
+    "financials": {
+      "revenue": { "2023": 8500000, "2024": 15200000, "2025": 28000000 },
+      "profit_margin": -0.12,
+      "funding_rounds": [
+        { "round": "Seed", "amount": 1500000, "date": "2016-11-20", "lead_investor": "EQT Ventures" },
+        { "round": "Series A", "amount": 10000000, "date": "2019-05-14", "lead_investor": "Atomico" },
+        { "round": "Series B", "amount": 40000000, "date": "2022-09-01", "lead_investor": "Lakestar" }
+      ],
+      "quarterly_revenue": [
+        { "quarter": "Q1-2025", "revenue": 5800000, "expenses": 7000000, "net": -1200000 },
+        { "quarter": "Q2-2025", "revenue": 6500000, "expenses": 7200000, "net": -700000 },
+        { "quarter": "Q3-2025", "revenue": 7200000, "expenses": 7500000, "net": -300000 },
+        { "quarter": "Q4-2025", "revenue": 8500000, "expenses": 7800000, "net": 700000 }
+      ]
+    },
+    "products": [
+      {
+        "name": "CobaltBot Pro",
+        "type": "Hardware",
+        "launched": "2019-09-15",
+        "pricing": { "free_tier": false, "starter": null, "pro": 45000, "enterprise": 120000 },
+        "metrics": { "dau": null, "mau": null, "churn_rate": 0.005, "nps": 85 }
+      },
+      {
+        "name": "CobaltBot Mini",
+        "type": "Hardware",
+        "launched": "2023-03-01",
+        "pricing": { "free_tier": false, "starter": 8500, "pro": 15000, "enterprise": null },
+        "metrics": { "dau": null, "mau": null, "churn_rate": 0.009, "nps": 79 }
+      },
+      {
+        "name": "Cobalt Fleet Manager",
+        "type": "SaaS",
+        "launched": "2021-06-15",
+        "pricing": { "free_tier": true, "starter": 99, "pro": 299, "enterprise": 999 },
+        "metrics": { "dau": 1800, "mau": 4200, "churn_rate": 0.018, "nps": 71 }
+      }
+    ],
+    "tags": ["robotics", "hardware", "computer-vision", "european"],
+    "metadata": { "notes": "Opening US office in Pittsburgh Q2 2026", "certifications": ["CE", "ISO 9001", "ISO 13482"] }
+  },
+  {
+    "id": 5,
+    "name": "Meridian Finance",
+    "founded": 2009,
+    "active": false,
+    "headquarters": {
+      "city": "London",
+      "state": null,
+      "country": "UK",
+      "coordinates": { "lat": 51.5074, "lng": -0.1278 },
+      "address": {
+        "street": "10 Threadneedle St",
+        "suite": "8th Floor",
+        "zip": "EC2R 8AY"
+      }
+    },
+    "ceo": {
+      "name": "James Whitfield",
+      "age": 56,
+      "education": { "degree": "MSc Finance", "school": "LSE", "year": 1994 },
+      "previous_companies": ["Goldman Sachs", "Revolut"]
+    },
+    "departments": [
+      {
+        "name": "Engineering",
+        "head": "Priya Sharma",
+        "budget": 5500000,
+        "headcount": 85,
+        "teams": [
+          { "name": "Core Banking", "members": 30, "tech_stack": ["Scala", "Akka", "Cassandra"], "lead": { "name": "Alex Dunn", "tenure_years": 7 } },
+          { "name": "Payments", "members": 25, "tech_stack": ["Java", "Kafka", "gRPC"], "lead": { "name": "Bao Nguyen", "tenure_years": 5 } },
+          { "name": "Risk Engine", "members": 20, "tech_stack": ["Python", "NumPy", "Redis"], "lead": { "name": "Claire Dupont", "tenure_years": 4 } },
+          { "name": "Frontend", "members": 10, "tech_stack": ["TypeScript", "Next.js", "Tailwind"], "lead": { "name": "Darren Cole", "tenure_years": 2 } }
+        ]
+      },
+      {
+        "name": "Compliance",
+        "head": "Eleanor Finch",
+        "budget": 2000000,
+        "headcount": 25,
+        "teams": [
+          { "name": "AML/KYC", "members": 12, "tech_stack": ["ComplyAdvantage", "Onfido"], "lead": { "name": "Farid Khoury", "tenure_years": 6 } },
+          { "name": "Regulatory", "members": 8, "tech_stack": null, "lead": { "name": "Gemma Walsh", "tenure_years": 3 } },
+          { "name": "Audit", "members": 5, "tech_stack": null, "lead": { "name": "Harry Mills", "tenure_years": 1 } }
+        ]
+      },
+      {
+        "name": "Product",
+        "head": "Isabel Mora",
+        "budget": 1200000,
+        "headcount": 18,
+        "teams": [
+          { "name": "Consumer", "members": 10, "tech_stack": ["Amplitude", "Figma"], "lead": { "name": "Jack Byrne", "tenure_years": 4 } },
+          { "name": "Business", "members": 8, "tech_stack": ["Looker", "Mixpanel"], "lead": { "name": "Kate Shaw", "tenure_years": 2 } }
+        ]
+      }
+    ],
+    "financials": {
+      "revenue": { "2023": 65000000, "2024": 72000000, "2025": 68000000 },
+      "profit_margin": 0.08,
+      "funding_rounds": [
+        { "round": "Series A", "amount": 8000000, "date": "2010-08-12", "lead_investor": "Index Ventures" },
+        { "round": "Series B", "amount": 30000000, "date": "2014-03-05", "lead_investor": "Balderton Capital" },
+        { "round": "Series C", "amount": 90000000, "date": "2017-10-22", "lead_investor": "DST Global" },
+        { "round": "Series D", "amount": 200000000, "date": "2021-01-15", "lead_investor": "General Atlantic" }
+      ],
+      "quarterly_revenue": [
+        { "quarter": "Q1-2025", "revenue": 18000000, "expenses": 16500000, "net": 1500000 },
+        { "quarter": "Q2-2025", "revenue": 17500000, "expenses": 16800000, "net": 700000 },
+        { "quarter": "Q3-2025", "revenue": 16500000, "expenses": 17000000, "net": -500000 },
+        { "quarter": "Q4-2025", "revenue": 16000000, "expenses": 17200000, "net": -1200000 }
+      ]
+    },
+    "products": [
+      {
+        "name": "Meridian Personal",
+        "type": "Mobile App",
+        "launched": "2012-01-15",
+        "pricing": { "free_tier": true, "starter": 0, "pro": 12, "enterprise": null },
+        "metrics": { "dau": 95000, "mau": 410000, "churn_rate": 0.055, "nps": 45 }
+      },
+      {
+        "name": "Meridian Business",
+        "type": "SaaS",
+        "launched": "2016-06-01",
+        "pricing": { "free_tier": false, "starter": 49, "pro": 149, "enterprise": 499 },
+        "metrics": { "dau": 8500, "mau": 32000, "churn_rate": 0.038, "nps": 52 }
+      },
+      {
+        "name": "Meridian Pay",
+        "type": "API",
+        "launched": "2019-11-01",
+        "pricing": { "free_tier": true, "starter": null, "pro": null, "enterprise": null },
+        "metrics": { "dau": 220000, "mau": 580000, "churn_rate": 0.022, "nps": 67 }
+      }
+    ],
+    "tags": ["fintech", "banking", "payments", "regulated", "series-d"],
+    "metadata": { "notes": "Acquired by HSBC in Dec 2025, winding down standalone operations", "regulatory_licenses": ["FCA", "PSD2", "EMI"] }
+  }
+]

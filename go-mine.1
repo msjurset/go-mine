@@ -17,8 +17,8 @@ go-mine \- interactive terminal data explorer for CSV, TSV, Parquet, and JSON fi
 .B go-mine
 is a terminal-based interactive data explorer built on the golars DataFrame
 library. It loads tabular data from CSV, TSV, Parquet, or JSON files and
-presents it in a full-screen TUI with five views: Table, Stats, Filter, SQL,
-and Columns.
+presents it in a full-screen TUI with six views: Table, Stats, Filter, SQL,
+Columns, and JQ.
 .PP
 The Table view displays paginated data with vim-style navigation, column
 sorting, and a row detail overlay. The Stats view shows per-column statistics
@@ -29,8 +29,11 @@ regex matching with \fB.matches()\fR, \fB.startswith()\fR, and
 \fB.endswith()\fR. Pressing enter on a blank filter clears any active filter
 and returns to the Table view. Filtered data can be exported to CSV, Parquet,
 or JSON via \fBctrl+e\fR from any view. The SQL view
-provides a full SQL query interface using golars SQLContext. The Columns view
-shows detailed metadata and sample values for every column.
+provides a full SQL query interface using golars SQLContext. The JQ view provides
+jq-style querying for JSON data navigation and transformation using the gojq
+library; the entire dataset is exposed as a JSON array for flexible
+aggregation, filtering, and reshaping. The Columns view shows detailed metadata
+and sample values for every column.
 .PP
 If no file is given, the \fB\-generate\fR flag can create sample employee data
 for exploration and demonstration.
@@ -60,8 +63,8 @@ Show help message and exit.
 .SH INTERACTIVE KEYS
 .SS Navigation
 .TP
-.B 1\-5
-Switch to view: Table, Stats, Filter, SQL, Columns.
+.B 1\-6
+Switch to view: Table, Stats, Filter, SQL, Columns, JQ.
 .TP
 .B tab / shift+tab
 Cycle through views.
@@ -110,11 +113,19 @@ returns to the Table view.
 .B ctrl+r
 Clear filter and restore full dataset.
 .TP
+.B tab
+Accept the current autocomplete suggestion. Column names and filter methods
+(e.g. .contains, .is_null) are suggested as you type.
+.TP
 .B up/down
-Browse filter history.
+Browse filter history, or navigate autocomplete suggestions when the dropdown
+is visible.
+.TP
+.B ctrl+n / ctrl+p
+Navigate autocomplete suggestions down/up.
 .TP
 .B esc
-Unfocus input.
+Dismiss autocomplete suggestions, or unfocus input.
 .SS Export
 .TP
 .B ctrl+e
@@ -124,21 +135,77 @@ Open export dialog to save current data to a file (.csv, .parquet, .json).
 .B enter
 Execute SQL query. Results appear in a full interactive table.
 .TP
+.B tab
+Accept the current autocomplete suggestion. Column names, table names, and
+SQL keywords are suggested as you type.
+.TP
 .B esc
 Toggle between editing the query and browsing results. When the input is
 focused, esc unfocuses it so you can navigate the result table. When browsing
-results, esc returns focus to the query input.
+results, esc returns focus to the query input. Also dismisses autocomplete.
 .TP
 .B ctrl+l
 Clear result and return to query input.
 .TP
 .B up/down
 Browse query history (when input is focused) or navigate result rows (when
-browsing results).
+browsing results). Navigates autocomplete suggestions when the dropdown is visible.
+.TP
+.B ctrl+n / ctrl+p
+Navigate autocomplete suggestions down/up.
 .TP
 .B j/k, h/l, pgup/pgdn, g/G, s, S, enter
 Standard table navigation keys work in the SQL result table (sort, page,
 scroll columns, open row detail).
+.SS JQ View
+.TP
+.B enter
+Execute jq query when input is focused. Toggle expand/collapse on the current
+JSON tree node when browsing results. The input is the full dataset as a JSON
+array. Results that are arrays of flat objects display as an interactive table;
+other results display as a syntax-highlighted, collapsible JSON tree.
+.TP
+.B tab
+Accept the current autocomplete suggestion. Field names (dot-prefixed) and
+jq builtins (select, map, group_by, etc.) are suggested as you type.
+.TP
+.B esc
+Toggle between editing the query and browsing results. When the input is
+focused, esc unfocuses it so you can navigate results. When browsing results,
+esc returns focus to the query input. Also dismisses autocomplete.
+.TP
+.B ctrl+l
+Clear result and return to query input.
+.TP
+.B up/down
+Browse query history (when input is focused). Navigates autocomplete
+suggestions when the dropdown is visible.
+.TP
+.B ctrl+n / ctrl+p
+Navigate autocomplete suggestions down/up.
+.TP
+.B j/k
+Navigate the JSON tree cursor up/down (when viewing non-tabular results).
+.TP
+.B space
+Toggle expand/collapse at the cursor position. If the cursor is on a leaf node,
+toggles the parent container.
+.TP
+.B E
+Expand the subtree at the cursor position and all its descendants.
+If the cursor is on a leaf node, expands the parent container's subtree.
+.TP
+.B C
+Collapse the subtree at the cursor position and all its descendants.
+If the cursor is on a leaf node, collapses the parent container's subtree.
+The cursor moves to the collapsed node.
+.TP
+.B t
+Toggle between tree view and table view. Only available when query results
+are tabular (arrays of flat objects).
+.TP
+.B pgup/pgdn, g/G
+Page through and jump to top/bottom of JSON tree output.
 .SS Search
 .TP
 .B /
@@ -191,6 +258,10 @@ Explore a JSON file.
 .TP
 .B go-mine -generate -rows 50000
 Generate 50,000 rows of sample data and explore interactively.
+.TP
+.B go-mine data.csv
+Then press 6 to open the JQ view and run queries like:
+.B .[] | select(.age > 30) | {name, age}
 .TP
 .B go-mine -info data.csv
 Print schema and summary statistics to stdout without launching the TUI.
