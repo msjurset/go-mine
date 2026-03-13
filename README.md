@@ -14,6 +14,7 @@ Interactive terminal data explorer for CSV, TSV, Parquet, and JSON files. Built 
 - SQL query interface with full SELECT/WHERE/GROUP BY/ORDER BY support and interactive results table
 - Column detail view with type info, null counts, unique values, and samples
 - Row detail overlay for inspecting individual records
+- Vim-style `/` search with regex support and match highlighting across all views
 - Built-in sample data generator for quick demos
 
 ## Install
@@ -51,11 +52,14 @@ go-mine -generate [-rows N]
 | `s` | Sort by current column (asc → desc → none) |
 | `S` | Clear sort |
 | `w` | Toggle float display (wide/compact) |
-| `enter` | Open row detail / apply filter (blank clears) / execute SQL |
+| `enter` / `space` | Open row detail / apply filter (blank clears) / execute SQL |
 | `esc` | Toggle between SQL input and result table navigation |
-| `pgup`/`pgdn` | Page through data |
+| `pgup`/`pgdn` / `ctrl+b`/`ctrl+f` | Page through data |
+| `ctrl+u`/`ctrl+d` or `K`/`J` | Half-page up/down |
 | `g`/`G` | Jump to top/bottom |
 | `ctrl+e` | Export current data to file |
+| `/` | Search (regex, case-insensitive) |
+| `n` / `N` | Next / previous search match |
 | `?` | Toggle help |
 | `q` | Quit |
 

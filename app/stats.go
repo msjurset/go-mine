@@ -46,11 +46,17 @@ func (m StatsModel) Update(msg tea.Msg) (StatsModel, tea.Cmd) {
 				m.colIndex--
 			}
 			m.ensureVisible()
-		case "pgdown":
+		case "pgdown", "ctrl+f":
 			m.colIndex = min(m.colIndex+5, m.df.Width()-1)
 			m.ensureVisible()
-		case "pgup":
+		case "pgup", "ctrl+b":
 			m.colIndex = max(m.colIndex-5, 0)
+			m.ensureVisible()
+		case "ctrl+d", "J":
+			m.colIndex = min(m.colIndex+3, m.df.Width()-1)
+			m.ensureVisible()
+		case "ctrl+u", "K":
+			m.colIndex = max(m.colIndex-3, 0)
 			m.ensureVisible()
 		}
 	}
@@ -65,6 +71,14 @@ func (m *StatsModel) ensureVisible() {
 		m.scrollY = cardTop
 	} else if cardTop+cardHeight > m.scrollY+visibleHeight {
 		m.scrollY = cardTop + cardHeight - visibleHeight
+	}
+}
+
+// GoToCol scrolls to show the given column's stats card.
+func (m *StatsModel) GoToCol(col int) {
+	if col >= 0 && col < m.df.Width() {
+		m.colIndex = col
+		m.ensureVisible()
 	}
 }
 

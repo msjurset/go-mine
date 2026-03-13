@@ -44,6 +44,7 @@ type Model struct {
 	sqlView     SQLModel
 	colInfoView ColInfoModel
 	exportView  ExportModel
+	searchView  SearchModel
 
 	filterText string
 	err        error
@@ -63,6 +64,7 @@ func NewModel(df *golars.DataFrame, fileName string) Model {
 		sqlView:     NewSQLModel(df, fileName),
 		colInfoView: NewColInfoModel(df),
 		exportView:  em,
+		searchView:  NewSearchModel(),
 	}
 }
 
@@ -81,6 +83,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.filterView.SetSize(m.width, contentHeight)
 		m.sqlView.SetSize(m.width, contentHeight)
 		m.colInfoView.SetSize(m.width, contentHeight)
+		m.searchView.width = m.width
 		return m, nil
 
 	case tea.KeyMsg:
@@ -94,6 +97,51 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			var cmd tea.Cmd
 			m.exportView, cmd = m.exportView.Update(msg)
 			return m, cmd
+		}
+
+		// Search: open with / when not in text input or detail view
+		if msg.String() == "/" && !m.isInputActive() && !m.tableView.showDetail {
+			if m.searchView.state == SearchNavigate {
+				// Re-open input from navigate state
+				m.searchView.state = SearchInput
+				m.searchView.input.SetValue(m.searchView.pattern)
+				m.searchView.input.Focus()
+				return m, textinput.Blink
+			}
+			if m.searchView.state == SearchInactive {
+				cmd := m.searchView.Open()
+				return m, cmd
+			}
+		}
+
+		// Search input state: all keys go to the search text input
+		if m.searchView.state == SearchInput {
+			var cmd tea.Cmd
+			m.searchView, cmd = m.searchView.Update(msg)
+			// If search just transitioned to Navigate, scan data and jump to first match
+			if m.searchView.state == SearchNavigate {
+				m.searchView.ScanDataFrame(m.displayedDF())
+				m.goToCurrentMatch()
+			}
+			return m, cmd
+		}
+
+		// Search navigate state: handle n/N/esc, let everything else fall through
+		if m.searchView.state == SearchNavigate {
+			switch msg.String() {
+			case "n":
+				m.searchView.NextMatch()
+				m.goToCurrentMatch()
+				return m, nil
+			case "N":
+				m.searchView.PrevMatch()
+				m.goToCurrentMatch()
+				return m, nil
+			case "esc":
+				m.searchView.Close()
+				return m, nil
+			}
+			// All other keys fall through to normal handling
 		}
 
 		// Export trigger — works from any view when not in text input
@@ -224,18 +272,24 @@ func (m Model) View() string {
 		b.WriteString(m.renderHelp())
 	} else {
 		// Active view content
+		var viewContent string
 		switch m.mode {
 		case ModeTable:
-			b.WriteString(m.tableView.View())
+			viewContent = m.tableView.View()
 		case ModeStats:
-			b.WriteString(m.statsView.View())
+			viewContent = m.statsView.View()
 		case ModeFilter:
-			b.WriteString(m.filterView.View())
+			viewContent = m.filterView.View()
 		case ModeSQL:
-			b.WriteString(m.sqlView.View())
+			viewContent = m.sqlView.View()
 		case ModeColInfo:
-			b.WriteString(m.colInfoView.View())
+			viewContent = m.colInfoView.View()
 		}
+		if m.searchView.Active() {
+			activeLine := m.activeMatchLine()
+			viewContent = m.searchView.HighlightContent(viewContent, activeLine)
+		}
+		b.WriteString(viewContent)
 	}
 
 	// Status bar
@@ -267,7 +321,12 @@ func (m Model) renderStatusBar() string {
 		left += fmt.Sprintf(" │ filter: %s", m.filterText)
 	}
 
-	right := " q:quit  tab:switch  ctrl+e:export  ?:help "
+	var right string
+	if m.searchView.Active() {
+		right = " " + m.searchView.StatusView() + " "
+	} else {
+		right = " q:quit  tab:switch  ctrl+e:export  /:search  ?:help "
+	}
 
 	leftRendered := statusBarStyle.Render(left)
 	rightRendered := statusBarStyle.Render(right)
@@ -304,7 +363,9 @@ func (m Model) renderHelp() string {
 				{"h/l  or  left/right", "Scroll columns left/right"},
 				{"enter", "Open row detail view"},
 				{"pgup / pgdn", "Page up/down"},
-				{"ctrl+u / ctrl+d", "Page up/down (alt)"},
+				{"ctrl+f / ctrl+b", "Page down/up"},
+				{"ctrl+d / ctrl+u / J / K", "Half-page down/up"},
+				{"space", "Toggle row detail view"},
 				{"g / G", "Jump to first/last page"},
 				{"s", "Sort by current column (asc -> desc -> none)"},
 				{"S", "Clear sort"},
@@ -337,6 +398,15 @@ func (m Model) renderHelp() string {
 				{"esc", "Unfocus input"},
 			},
 		},
+		{
+			header: "Search",
+			keys: [][2]string{
+				{"/", "Open search (regex)"},
+				{"n", "Next match"},
+				{"N", "Previous match"},
+				{"esc", "Dismiss search"},
+			},
+		},
 	}
 
 	var b strings.Builder
@@ -357,7 +427,83 @@ func (m Model) renderHelp() string {
 	return lipgloss.NewStyle().Width(m.width).Render(b.String())
 }
 
+// displayedDF returns the DataFrame currently being displayed, accounting for
+// sort order in the table view.
+func (m Model) displayedDF() *golars.DataFrame {
+	switch m.mode {
+	case ModeTable:
+		return m.tableView.sortedDF
+	case ModeSQL:
+		if m.sqlView.result != nil {
+			return m.sqlView.table.sortedDF
+		}
+	}
+	return m.currentDF
+}
+
+// activeMatchLine returns the rendered line index where the current search
+// match should be highlighted with the active (red) style, or -1 if unknown.
+func (m Model) activeMatchLine() int {
+	row, _ := m.searchView.CurrentMatch()
+	if row < 0 {
+		return -1
+	}
+	switch m.mode {
+	case ModeTable:
+		// Table: 3 header lines (header, types, separator), then data rows.
+		// Data row i corresponds to absolute row page*pageSize + i.
+		pageStart := m.tableView.page * m.tableView.pageSize
+		localRow := row - pageStart
+		if localRow < 0 || localRow >= m.tableView.pageSize {
+			return -1 // not on current page
+		}
+		return 3 + localRow
+	case ModeSQL:
+		if m.sqlView.result != nil {
+			pageStart := m.sqlView.table.page * m.sqlView.table.pageSize
+			localRow := row - pageStart
+			if localRow < 0 || localRow >= m.sqlView.table.pageSize {
+				return -1
+			}
+			// SQL view has input line(s) then table with same 3-line header
+			// This is approximate; the exact offset depends on SQL view layout
+			return -1 // too complex to map reliably, skip active highlight for SQL
+		}
+		return -1
+	default:
+		// Stats, Filter, ColInfo don't have a simple row-to-line mapping
+		return -1
+	}
+}
+
+// goToCurrentMatch scrolls the active view to show the current search match.
+func (m *Model) goToCurrentMatch() {
+	row, col := m.searchView.CurrentMatch()
+	if row < 0 {
+		return
+	}
+	switch m.mode {
+	case ModeTable:
+		m.tableView.GoToRow(row)
+		m.tableView.GoToCol(col)
+	case ModeStats:
+		m.statsView.GoToCol(col)
+	case ModeFilter:
+		// Filter view doesn't have scrollable data rows
+	case ModeSQL:
+		if m.sqlView.result != nil {
+			m.sqlView.table.GoToRow(row)
+			m.sqlView.table.GoToCol(col)
+		}
+	case ModeColInfo:
+		m.colInfoView.GoToCol(col)
+	}
+}
+
 func (m Model) isInputActive() bool {
+	if m.searchView.state == SearchInput {
+		return true
+	}
 	switch m.mode {
 	case ModeFilter:
 		return m.filterView.input.Focused()

@@ -40,15 +40,26 @@ func (m ColInfoModel) Update(msg tea.Msg) (ColInfoModel, tea.Cmd) {
 			if m.scrollY > 0 {
 				m.scrollY--
 			}
-		case "pgdown":
+		case "pgdown", "ctrl+f":
 			m.scrollY += 10
-		case "pgup":
+		case "pgup", "ctrl+b":
 			m.scrollY = max(0, m.scrollY-10)
+		case "ctrl+d", "J":
+			m.scrollY += 5
+		case "ctrl+u", "K":
+			m.scrollY = max(0, m.scrollY-5)
 		case "g":
 			m.scrollY = 0
 		}
 	}
 	return m, nil
+}
+
+// GoToCol scrolls to the given column index.
+func (m *ColInfoModel) GoToCol(col int) {
+	if col >= 0 && col < m.df.Width() {
+		m.scrollY = col * 10 // approximate lines per column card
+	}
 }
 
 func (m ColInfoModel) View() string {

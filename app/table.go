@@ -62,7 +62,7 @@ func (m TableModel) Update(msg tea.Msg) (TableModel, tea.Cmd) {
 		// Row detail overlay handles its own keys
 		if m.showDetail {
 			switch msg.String() {
-			case "esc", "enter", "q":
+			case "esc", "enter", "q", " ":
 				m.showDetail = false
 				m.detailScrollY = 0
 			case "j", "down":
@@ -71,10 +71,14 @@ func (m TableModel) Update(msg tea.Msg) (TableModel, tea.Cmd) {
 				if m.detailScrollY > 0 {
 					m.detailScrollY--
 				}
-			case "pgdown":
+			case "pgdown", "ctrl+f":
 				m.detailScrollY += 10
-			case "pgup":
+			case "pgup", "ctrl+b":
 				m.detailScrollY = max(0, m.detailScrollY-10)
+			case "ctrl+d":
+				m.detailScrollY += 5
+			case "ctrl+u":
+				m.detailScrollY = max(0, m.detailScrollY-5)
 			}
 			return m, nil
 		}
@@ -83,7 +87,7 @@ func (m TableModel) Update(msg tea.Msg) (TableModel, tea.Cmd) {
 		totalPages := m.totalPages()
 
 		switch msg.String() {
-		case "enter":
+		case "enter", " ":
 			m.showDetail = true
 			m.detailScrollY = 0
 			return m, nil
@@ -109,16 +113,32 @@ func (m TableModel) Update(msg tea.Msg) (TableModel, tea.Cmd) {
 			if m.colOffset > 0 {
 				m.colOffset--
 			}
-		case "pgdown", "ctrl+d":
+		case "pgdown", "ctrl+f":
 			if m.page < totalPages-1 {
 				m.page++
 				m.cursorRow = 0
 			}
-		case "pgup", "ctrl+u":
+		case "pgup", "ctrl+b":
 			if m.page > 0 {
 				m.page--
 				m.cursorRow = 0
 			}
+		case "ctrl+d", "J":
+			half := m.pageSize / 2
+			absRow := m.page*m.pageSize + m.cursorRow + half
+			if absRow >= totalRows {
+				absRow = totalRows - 1
+			}
+			m.page = absRow / m.pageSize
+			m.cursorRow = absRow % m.pageSize
+		case "ctrl+u", "K":
+			half := m.pageSize / 2
+			absRow := m.page*m.pageSize + m.cursorRow - half
+			if absRow < 0 {
+				absRow = 0
+			}
+			m.page = absRow / m.pageSize
+			m.cursorRow = absRow % m.pageSize
 		case "g":
 			m.page = 0
 			m.cursorRow = 0
@@ -524,6 +544,24 @@ func calcColWidth(s *golars.Series, name string, wide bool) int {
 		}
 	}
 	return w
+}
+
+// GoToRow scrolls the table so that the given absolute row index is visible
+// and positions the cursor on it.
+func (m *TableModel) GoToRow(row int) {
+	if m.sortedDF == nil || row < 0 || row >= m.sortedDF.Height() {
+		return
+	}
+	m.page = row / m.pageSize
+	m.cursorRow = row % m.pageSize
+}
+
+// GoToCol scrolls the table so the given column index is the first visible column.
+func (m *TableModel) GoToCol(col int) {
+	if m.sortedDF == nil || col < 0 || col >= m.sortedDF.Width() {
+		return
+	}
+	m.colOffset = col
 }
 
 func (m TableModel) totalPages() int {

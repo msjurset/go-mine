@@ -79,11 +79,14 @@ Move cursor up/down.
 .B h/l or left/right
 Scroll columns left/right.
 .TP
-.B enter
-Open row detail overlay.
+.B enter or space
+Toggle row detail overlay.
 .TP
-.B pgup/pgdn or ctrl+u/ctrl+d
+.B pgup/pgdn or ctrl+f/ctrl+b
 Page up/down.
+.TP
+.B ctrl+d/ctrl+u or J/K
+Half-page down/up.
 .TP
 .B g / G
 Jump to first/last page.
@@ -136,6 +139,20 @@ browsing results).
 .B j/k, h/l, pgup/pgdn, g/G, s, S, enter
 Standard table navigation keys work in the SQL result table (sort, page,
 scroll columns, open row detail).
+.SS Search
+.TP
+.B /
+Open search dialog. Accepts regular expressions (case-insensitive). Matches
+are highlighted across all views. Press enter to confirm or esc to cancel.
+.TP
+.B n
+Jump to next match.
+.TP
+.B N
+Jump to previous match.
+.TP
+.B esc
+Dismiss search and clear highlights.
 .SH FILTER SYNTAX
 Filters use a simple expression language:
 .PP

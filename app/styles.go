@@ -99,4 +99,14 @@ var (
 
 	helpStyle = lipgloss.NewStyle().
 			Foreground(colorMuted)
+
+	// Search highlight styles
+	searchHighlightStyle = lipgloss.NewStyle().
+				Background(lipgloss.Color("#F59E0B")).
+				Foreground(lipgloss.Color("#1F2937"))
+
+	searchActiveStyle = lipgloss.NewStyle().
+				Background(lipgloss.Color("#EF4444")).
+				Foreground(lipgloss.Color("#FFFFFF")).
+				Bold(true)
 )
