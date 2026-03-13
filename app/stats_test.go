@@ -7,25 +7,33 @@ import (
 )
 
 func TestIsNumeric(t *testing.T) {
-	numericTypes := []golars.DataType{
-		golars.Int8, golars.Int16, golars.Int32, golars.Int64,
-		golars.UInt8, golars.UInt16, golars.UInt32, golars.UInt64,
-		golars.Float32, golars.Float64,
+	tests := []struct {
+		dt   golars.DataType
+		want bool
+	}{
+		{golars.Int8, true},
+		{golars.Int16, true},
+		{golars.Int32, true},
+		{golars.Int64, true},
+		{golars.UInt8, true},
+		{golars.UInt16, true},
+		{golars.UInt32, true},
+		{golars.UInt64, true},
+		{golars.Float32, true},
+		{golars.Float64, true},
+		{golars.String, false},
+		{golars.Boolean, false},
+		{golars.Date, false},
+		{golars.DateTime, false},
+		{golars.Time, false},
+		{golars.Duration, false},
 	}
-	for _, dt := range numericTypes {
-		if !isNumeric(dt) {
-			t.Errorf("isNumeric(%v) = false, want true", dt)
-		}
-	}
-
-	nonNumericTypes := []golars.DataType{
-		golars.String, golars.Boolean, golars.Date, golars.DateTime,
-		golars.Time, golars.Duration,
-	}
-	for _, dt := range nonNumericTypes {
-		if isNumeric(dt) {
-			t.Errorf("isNumeric(%v) = true, want false", dt)
-		}
+	for _, tt := range tests {
+		t.Run(shortTypeName(tt.dt), func(t *testing.T) {
+			if got := isNumeric(tt.dt); got != tt.want {
+				t.Errorf("isNumeric(%v) = %v, want %v", tt.dt, got, tt.want)
+			}
+		})
 	}
 }
 
@@ -48,7 +56,7 @@ func TestRenderMiniTable(t *testing.T) {
 }
 
 func TestNewStatsModel(t *testing.T) {
-	df := testDataFrame()
+	df := testDataFrame(t)
 	sm := NewStatsModel(df)
 
 	if sm.df != df {
@@ -60,7 +68,7 @@ func TestNewStatsModel(t *testing.T) {
 }
 
 func TestStatsModelSetDataFrame(t *testing.T) {
-	df := testDataFrame()
+	df := testDataFrame(t)
 	sm := NewStatsModel(df)
 	sm.colIndex = 3
 	sm.scrollY = 10

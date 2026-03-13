@@ -104,17 +104,9 @@ func (m StatsModel) View() string {
 	// Apply scroll
 	rightLines := strings.Split(rightPanel, "\n")
 	visibleHeight := max(1, m.height-4)
-	scrollY := m.scrollY
-	maxScroll := len(rightLines) - visibleHeight
-	if maxScroll < 0 {
-		maxScroll = 0
-	}
-	if scrollY > maxScroll {
-		scrollY = maxScroll
-	}
-	endLine := min(scrollY+visibleHeight, len(rightLines))
-	if scrollY < len(rightLines) && scrollY <= endLine {
-		rightPanel = strings.Join(rightLines[scrollY:endLine], "\n")
+	start, end := clampedScroll(m.scrollY, len(rightLines), visibleHeight)
+	if start < len(rightLines) {
+		rightPanel = strings.Join(rightLines[start:end], "\n")
 	}
 
 	leftPanel := lipgloss.NewStyle().
@@ -184,7 +176,7 @@ func renderMiniTable(df *golars.DataFrame, maxWidth int) string {
 		w := len(f.Name) + 2
 		col := df.ColumnByIndex(i)
 		for j := 0; j < col.Len(); j++ {
-			val := formatCellValue(col, j)
+			val := formatCellValue(col, j, false)
 			if len(val)+2 > w {
 				w = len(val) + 2
 			}
@@ -215,7 +207,7 @@ func renderMiniTable(df *golars.DataFrame, maxWidth int) string {
 		var cells []string
 		for i, w := range visibleWidths {
 			col := df.ColumnByIndex(i)
-			val := formatCellValue(col, r)
+			val := formatCellValue(col, r, false)
 			cells = append(cells, cellStyle.Width(w).MaxWidth(w).Render(truncate(val, w-2)))
 		}
 		rows = append(rows, lipgloss.JoinHorizontal(lipgloss.Top, cells...))
@@ -229,12 +221,3 @@ func renderMiniTable(df *golars.DataFrame, maxWidth int) string {
 	return lipgloss.JoinVertical(lipgloss.Left, rows...) + footer
 }
 
-func isNumeric(dt golars.DataType) bool {
-	switch dt {
-	case golars.Int8, golars.Int16, golars.Int32, golars.Int64,
-		golars.UInt8, golars.UInt16, golars.UInt32, golars.UInt64,
-		golars.Float32, golars.Float64:
-		return true
-	}
-	return false
-}

@@ -139,7 +139,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.mode = ModeColInfo
 				return m, nil
 			case "tab":
-				m.mode = (m.mode + 1) % 5
+				m.mode = (m.mode + 1) % Mode(len(modeNames))
 				if m.mode == ModeFilter {
 					m.filterView.Focus()
 					return m, textinput.Blink
@@ -150,7 +150,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return m, nil
 			case "shift+tab":
-				m.mode = (m.mode + 4) % 5
+				m.mode = (m.mode + Mode(len(modeNames)) - 1) % Mode(len(modeNames))
 				if m.mode == ModeFilter {
 					m.filterView.Focus()
 					return m, textinput.Blink
@@ -308,6 +308,7 @@ func (m Model) renderHelp() string {
 				{"g / G", "Jump to first/last page"},
 				{"s", "Sort by current column (asc -> desc -> none)"},
 				{"S", "Clear sort"},
+				{"w", "Toggle float display (wide/compact)"},
 			},
 		},
 		{

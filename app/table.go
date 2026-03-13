@@ -3,10 +3,12 @@ package app
 import (
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 	"github.com/msjurset/golars"
 )
 
@@ -22,6 +24,8 @@ type TableModel struct {
 	width     int
 	height    int
 
+	wideFloats bool
+
 	// Row detail overlay
 	showDetail    bool
 	detailScrollY int
@@ -29,10 +33,11 @@ type TableModel struct {
 
 func NewTableModel(df *golars.DataFrame) TableModel {
 	return TableModel{
-		df:       df,
-		sortedDF: df,
-		sortCol:  -1,
-		pageSize: 20,
+		df:         df,
+		sortedDF:   df,
+		sortCol:    -1,
+		pageSize:   20,
+		wideFloats: true,
 	}
 }
 
@@ -120,6 +125,8 @@ func (m TableModel) Update(msg tea.Msg) (TableModel, tea.Cmd) {
 		case "G":
 			m.page = totalPages - 1
 			m.cursorRow = min(m.pageSize-1, totalRows-1-(totalPages-1)*m.pageSize)
+		case "w":
+			m.wideFloats = !m.wideFloats
 		case "s":
 			m.cycleSort()
 		case "S":
@@ -244,7 +251,7 @@ func (m TableModel) renderTable() string {
 		for i, cw := range colWidths {
 			colIdx := m.colOffset + i
 			col := pageDF.ColumnByIndex(colIdx)
-			val := formatCellValue(col, rowIdx)
+			val := formatCellValue(col, rowIdx, m.wideFloats)
 
 			style := cellStyle.Width(cw).MaxWidth(cw)
 			if rowIdx == cursorRow {
@@ -261,10 +268,14 @@ func (m TableModel) renderTable() string {
 
 	totalPages := m.totalPages()
 	absRow := start + cursorRow + 1
+	floatMode := "wide"
+	if !m.wideFloats {
+		floatMode = "compact"
+	}
 	footer := helpStyle.Render(fmt.Sprintf(
-		"  Page %d/%d │ Row %d/%d │ Col %d-%d/%d │ ↑↓:nav ←→:scroll s:sort enter:detail g/G:top/bottom",
+		"  Page %d/%d │ Row %d/%d │ Col %d-%d/%d │ floats:%s │ ↑↓:nav ←→:scroll s:sort w:floats enter:detail",
 		m.page+1, totalPages, absRow, m.sortedDF.Height(),
-		m.colOffset+1, min(m.colOffset+len(colWidths), totalCols), totalCols,
+		m.colOffset+1, min(m.colOffset+len(colWidths), totalCols), totalCols, floatMode,
 	))
 
 	return table + "\n" + footer
@@ -306,7 +317,7 @@ func (m TableModel) renderRowDetail() string {
 	var lines []string
 	for _, f := range fields {
 		col := getColumn(m.sortedDF, f.Name)
-		val := formatCellValue(col, absRowIdx)
+		val := formatCellValue(col, absRowIdx, m.wideFloats)
 		typStr := shortTypeName(f.Dtype)
 
 		label := statusKeyStyle.Render(fmt.Sprintf("  %-*s", maxName+1, f.Name))
@@ -332,21 +343,13 @@ func (m TableModel) renderRowDetail() string {
 		visibleLines = 3
 	}
 
-	scrollY := m.detailScrollY
-	maxScroll := len(lines) - visibleLines
-	if maxScroll < 0 {
-		maxScroll = 0
-	}
-	if scrollY > maxScroll {
-		scrollY = maxScroll
-	}
-	endLine := min(scrollY+visibleLines, len(lines))
-	visibleContent := strings.Join(lines[scrollY:endLine], "\n")
+	start, end := clampedScroll(m.detailScrollY, len(lines), visibleLines)
+	visibleContent := strings.Join(lines[start:end], "\n")
 
 	// Scroll indicator
 	scrollInfo := ""
 	if len(lines) > visibleLines {
-		scrollInfo = helpStyle.Render(fmt.Sprintf("  showing %d-%d of %d fields", scrollY+1, endLine, len(lines)))
+		scrollInfo = helpStyle.Render(fmt.Sprintf("  showing %d-%d of %d fields", start+1, end, len(lines)))
 	}
 
 	footer := helpStyle.Render("  esc/enter:close  ↑↓:scroll")
@@ -443,23 +446,30 @@ func (m TableModel) overlayCenter(bg, overlay string) string {
 	return strings.Join(result, "\n")
 }
 
-// padOrTruncate returns a string that is exactly `width` visible characters,
-// padding with spaces or truncating as needed.
+// padOrTruncate returns a string that is exactly `width` visible columns,
+// padding with spaces or truncating as needed. Uses rune-width-aware
+// measurement to correctly handle multi-byte characters like box-drawing glyphs.
 func padOrTruncate(s string, width int) string {
 	plain := stripAnsi(s)
-	if len(plain) >= width {
-		return plain[:width]
+	pw := runewidth.StringWidth(plain)
+	if pw <= width {
+		return plain + strings.Repeat(" ", width-pw)
 	}
-	return plain + strings.Repeat(" ", width-len(plain))
+	return runewidth.Truncate(plain, width, "")
 }
 
 // sliceVisual returns the substring starting at the given visible column.
+// Uses rune-width-aware measurement to correctly handle multi-byte characters.
 func sliceVisual(s string, startCol int) string {
 	plain := stripAnsi(s)
-	if startCol >= len(plain) {
-		return ""
+	visW := 0
+	for i, r := range plain {
+		if visW >= startCol {
+			return plain[i:]
+		}
+		visW += runewidth.RuneWidth(r)
 	}
-	return plain[startCol:]
+	return ""
 }
 
 // stripAnsi removes ANSI escape sequences from a string.
@@ -493,7 +503,7 @@ func (m TableModel) calcColumnWidths(fields []golars.Field) []int {
 
 	for i := m.colOffset; i < len(fields) && used < available; i++ {
 		col := getColumn(pageDF, fields[i].Name)
-		w := calcColWidth(col, fields[i].Name)
+		w := calcColWidth(col, fields[i].Name, m.wideFloats)
 		w = min(w, 40)
 		w = max(w, 6)
 		if used+w > available {
@@ -505,10 +515,10 @@ func (m TableModel) calcColumnWidths(fields []golars.Field) []int {
 	return widths
 }
 
-func calcColWidth(s *golars.Series, name string) int {
+func calcColWidth(s *golars.Series, name string, wide bool) int {
 	w := len(name) + 4
 	for i := 0; i < s.Len(); i++ {
-		val := formatCellValue(s, i)
+		val := formatCellValue(s, i, wide)
 		if len(val)+2 > w {
 			w = len(val) + 2
 		}
@@ -520,10 +530,10 @@ func (m TableModel) totalPages() int {
 	if m.sortedDF.Height() == 0 {
 		return 1
 	}
-	return int(math.Ceil(float64(m.sortedDF.Height()) / float64(m.pageSize)))
+	return (m.sortedDF.Height() + m.pageSize - 1) / m.pageSize
 }
 
-func formatCellValue(s *golars.Series, i int) string {
+func formatCellValue(s *golars.Series, i int, wide bool) string {
 	if s.IsNull(i) {
 		return "null"
 	}
@@ -537,10 +547,7 @@ func formatCellValue(s *golars.Series, i int) string {
 		return fmt.Sprintf("%d", v)
 	case golars.Float32, golars.Float64:
 		v, _ := s.GetFloat64(i)
-		if v == math.Trunc(v) && math.Abs(v) < 1e15 {
-			return fmt.Sprintf("%.1f", v)
-		}
-		return fmt.Sprintf("%.4g", v)
+		return formatFloat(v, wide)
 	case golars.Boolean:
 		v, _ := s.GetBool(i)
 		if v {
@@ -556,43 +563,23 @@ func formatCellValue(s *golars.Series, i int) string {
 	}
 }
 
-func shortTypeName(dt golars.DataType) string {
-	switch dt {
-	case golars.Int8:
-		return "i8"
-	case golars.Int16:
-		return "i16"
-	case golars.Int32:
-		return "i32"
-	case golars.Int64:
-		return "i64"
-	case golars.UInt8:
-		return "u8"
-	case golars.UInt16:
-		return "u16"
-	case golars.UInt32:
-		return "u32"
-	case golars.UInt64:
-		return "u64"
-	case golars.Float32:
-		return "f32"
-	case golars.Float64:
-		return "f64"
-	case golars.Boolean:
-		return "bool"
-	case golars.String:
-		return "str"
-	case golars.Date:
-		return "date"
-	case golars.DateTime:
-		return "datetime"
-	case golars.Time:
-		return "time"
-	case golars.Duration:
-		return "dur"
-	default:
-		return "?"
+func formatFloat(v float64, wide bool) string {
+	if wide {
+		s := strconv.FormatFloat(v, 'f', -1, 64)
+		// Append .0 to whole numbers so floats are visually distinct from ints
+		if v == math.Trunc(v) && !strings.Contains(s, ".") {
+			s += ".0"
+		}
+		if len(s) <= 15 {
+			return s
+		}
+		return fmt.Sprintf("%.6e", v)
 	}
+	// Compact mode
+	if v == math.Trunc(v) && math.Abs(v) < 1e15 {
+		return fmt.Sprintf("%.1f", v)
+	}
+	return fmt.Sprintf("%.4g", v)
 }
 
 // wrapText splits a string into lines of at most maxWidth characters.

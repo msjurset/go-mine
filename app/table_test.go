@@ -1,24 +1,29 @@
 package app
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/msjurset/golars"
 )
 
-func testDataFrame() *golars.DataFrame {
-	df, _ := golars.NewDataFrame(
+func testDataFrame(t *testing.T) *golars.DataFrame {
+	t.Helper()
+	df, err := golars.NewDataFrame(
 		golars.NewInt64Series("id", []int64{1, 2, 3, 4, 5}),
 		golars.NewStringSeries("name", []string{"Alice", "Bob", "Charlie", "Diana", "Eve"}),
 		golars.NewFloat64Series("score", []float64{95.5, 82.3, 78.0, 91.2, 88.7}),
 		golars.NewBooleanSeries("active", []bool{true, false, true, true, false}),
 		golars.NewStringSeriesWithValidity("note", []string{"good", "", "ok", "great", ""}, []bool{true, false, true, true, false}),
 	)
+	if err != nil {
+		t.Fatalf("testDataFrame: %v", err)
+	}
 	return df
 }
 
 func TestNewTableModel(t *testing.T) {
-	df := testDataFrame()
+	df := testDataFrame(t)
 	tm := NewTableModel(df)
 
 	if tm.page != 0 {
@@ -39,7 +44,7 @@ func TestNewTableModel(t *testing.T) {
 }
 
 func TestSetDataFrame(t *testing.T) {
-	df := testDataFrame()
+	df := testDataFrame(t)
 	tm := NewTableModel(df)
 	tm.page = 3
 	tm.cursorRow = 2
@@ -97,30 +102,63 @@ func TestTotalPages(t *testing.T) {
 }
 
 func TestFormatCellValue(t *testing.T) {
-	df := testDataFrame()
+	df := testDataFrame(t)
 
 	tests := []struct {
 		colName  string
 		row      int
+		wide     bool
 		expected string
 	}{
-		{"id", 0, "1"},
-		{"id", 4, "5"},
-		{"name", 0, "Alice"},
-		{"name", 2, "Charlie"},
-		{"score", 0, "95.5"},
-		{"score", 2, "78.0"},
-		{"active", 0, "true"},
-		{"active", 1, "false"},
-		{"note", 1, "null"}, // null value
-		{"note", 0, "good"},
+		{"id", 0, true, "1"},
+		{"id", 4, true, "5"},
+		{"name", 0, true, "Alice"},
+		{"name", 2, true, "Charlie"},
+		{"score", 0, true, "95.5"},
+		{"score", 2, true, "78.0"},
+		{"active", 0, true, "true"},
+		{"active", 1, true, "false"},
+		{"note", 1, true, "null"}, // null value
+		{"note", 0, true, "good"},
+		// Compact mode
+		{"score", 0, false, "95.5"},
+		{"score", 2, false, "78.0"},
 	}
 	for _, tt := range tests {
-		t.Run(tt.colName+"_"+tt.expected, func(t *testing.T) {
+		label := fmt.Sprintf("%s_%s_wide=%v", tt.colName, tt.expected, tt.wide)
+		t.Run(label, func(t *testing.T) {
 			col, _ := df.Column(tt.colName)
-			got := formatCellValue(col, tt.row)
+			got := formatCellValue(col, tt.row, tt.wide)
 			if got != tt.expected {
-				t.Errorf("formatCellValue(%s, %d) = %q, want %q", tt.colName, tt.row, got, tt.expected)
+				t.Errorf("formatCellValue(%s, %d, %v) = %q, want %q", tt.colName, tt.row, tt.wide, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestFormatFloat(t *testing.T) {
+	tests := []struct {
+		name     string
+		v        float64
+		wide     bool
+		expected string
+	}{
+		{"wide whole", 78.0, true, "78.0"},
+		{"wide zero", 0.0, true, "0.0"},
+		{"wide decimal", 95.5, true, "95.5"},
+		{"wide precise", 3.14159265, true, "3.14159265"},
+		{"wide large", 1234567.89, true, "1234567.89"},
+		{"wide very large", 1e16, true, "1.000000e+16"},
+		{"wide small", 0.000001, true, "0.000001"},
+		{"compact whole", 78.0, false, "78.0"},
+		{"compact decimal", 95.5, false, "95.5"},
+		{"compact large", 12345.6, false, "1.235e+04"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := formatFloat(tt.v, tt.wide)
+			if got != tt.expected {
+				t.Errorf("formatFloat(%g, %v) = %q, want %q", tt.v, tt.wide, got, tt.expected)
 			}
 		})
 	}
@@ -217,6 +255,8 @@ func TestPadOrTruncate(t *testing.T) {
 		{"exact", "hello", 5, "hello"},
 		{"truncate", "hello world", 5, "hello"},
 		{"zero width", "hello", 0, ""},
+		{"box drawing", "──────", 3, "───"},
+		{"box drawing pad", "──", 5, "──   "},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -239,6 +279,9 @@ func TestSliceVisual(t *testing.T) {
 		{"from middle", "hello", 2, "llo"},
 		{"past end", "hello", 10, ""},
 		{"at end", "hello", 5, ""},
+		{"box drawing", "──────", 3, "───"},
+		{"box drawing from start", "╭──╮", 0, "╭──╮"},
+		{"box drawing skip corner", "╭──╮", 1, "──╮"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -252,7 +295,7 @@ func TestSliceVisual(t *testing.T) {
 
 func TestCalcColWidth(t *testing.T) {
 	s := golars.NewStringSeries("name", []string{"Alice", "Bob", "Christopher"})
-	w := calcColWidth(s, "name")
+	w := calcColWidth(s, "name", false)
 	// Should be at least len("Christopher") + 2 = 13
 	if w < 13 {
 		t.Errorf("expected width >= 13, got %d", w)

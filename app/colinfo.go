@@ -75,17 +75,9 @@ func (m ColInfoModel) View() string {
 	// Apply scrolling
 	lines := strings.Split(content, "\n")
 	visibleHeight := max(1, m.height-3)
-	scrollY := m.scrollY
-	maxScroll := len(lines) - visibleHeight
-	if maxScroll < 0 {
-		maxScroll = 0
-	}
-	if scrollY > maxScroll {
-		scrollY = maxScroll
-	}
-	endLine := min(scrollY+visibleHeight, len(lines))
-	if scrollY < len(lines) && scrollY <= endLine {
-		content = strings.Join(lines[scrollY:endLine], "\n")
+	start, end := clampedScroll(m.scrollY, len(lines), visibleHeight)
+	if start < len(lines) {
+		content = strings.Join(lines[start:end], "\n")
 	}
 
 	footer := helpStyle.Render(fmt.Sprintf(

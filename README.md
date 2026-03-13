@@ -50,6 +50,7 @@ go-mine -generate [-rows N]
 | `h`/`l` or `←`/`→` | Scroll columns |
 | `s` | Sort by current column (asc → desc → none) |
 | `S` | Clear sort |
+| `w` | Toggle float display (wide/compact) |
 | `enter` | Open row detail / apply filter (blank clears) / execute SQL |
 | `esc` | Toggle between SQL input and result table navigation |
 | `pgup`/`pgdn` | Page through data |

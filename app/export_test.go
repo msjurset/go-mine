@@ -9,7 +9,7 @@ import (
 )
 
 func TestExportCSV(t *testing.T) {
-	df := testDataFrame()
+	df := testDataFrame(t)
 	dir := t.TempDir()
 	path := filepath.Join(dir, "out.csv")
 
@@ -36,7 +36,7 @@ func TestExportCSV(t *testing.T) {
 }
 
 func TestExportParquet(t *testing.T) {
-	df := testDataFrame()
+	df := testDataFrame(t)
 	dir := t.TempDir()
 	path := filepath.Join(dir, "out.parquet")
 
@@ -59,7 +59,7 @@ func TestExportParquet(t *testing.T) {
 }
 
 func TestExportJSON(t *testing.T) {
-	df := testDataFrame()
+	df := testDataFrame(t)
 	dir := t.TempDir()
 	path := filepath.Join(dir, "out.json")
 
@@ -82,7 +82,7 @@ func TestExportJSON(t *testing.T) {
 }
 
 func TestExportUnsupportedFormat(t *testing.T) {
-	df := testDataFrame()
+	df := testDataFrame(t)
 	em := NewExportModel()
 	em.SetDataFrame(df)
 	em.input.SetValue("/tmp/out.xlsx")
@@ -94,7 +94,7 @@ func TestExportUnsupportedFormat(t *testing.T) {
 }
 
 func TestExportEmptyPath(t *testing.T) {
-	df := testDataFrame()
+	df := testDataFrame(t)
 	em := NewExportModel()
 	em.SetDataFrame(df)
 	em.input.SetValue("")

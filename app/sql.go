@@ -33,12 +33,7 @@ func NewSQLModel(df *golars.DataFrame, fileName string) SQLModel {
 	ctx.Register("data", df)
 
 	// Also register with a cleaned-up filename
-	cleanName := strings.TrimSuffix(fileName, ".csv")
-	cleanName = strings.TrimSuffix(cleanName, ".parquet")
-	cleanName = strings.TrimSuffix(cleanName, ".json")
-	cleanName = strings.TrimSuffix(cleanName, ".tsv")
-	cleanName = strings.ReplaceAll(cleanName, "-", "_")
-	cleanName = strings.ReplaceAll(cleanName, " ", "_")
+	cleanName := cleanFileName(fileName)
 	if cleanName != "data" && cleanName != "" {
 		ctx.Register(cleanName, df)
 	}
@@ -60,12 +55,7 @@ func (m *SQLModel) SetDataFrame(df *golars.DataFrame, fileName string) {
 	m.sqlCtx = golars.NewSQLContext()
 	m.sqlCtx.Register("data", df)
 
-	cleanName := strings.TrimSuffix(fileName, ".csv")
-	cleanName = strings.TrimSuffix(cleanName, ".parquet")
-	cleanName = strings.TrimSuffix(cleanName, ".json")
-	cleanName = strings.TrimSuffix(cleanName, ".tsv")
-	cleanName = strings.ReplaceAll(cleanName, "-", "_")
-	cleanName = strings.ReplaceAll(cleanName, " ", "_")
+	cleanName := cleanFileName(fileName)
 	if cleanName != "data" && cleanName != "" {
 		m.sqlCtx.Register(cleanName, df)
 	}

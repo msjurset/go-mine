@@ -6,19 +6,46 @@ import (
 	"github.com/msjurset/golars"
 )
 
-func filterTestDF() *golars.DataFrame {
-	df, _ := golars.NewDataFrame(
+func filterTestDF(t *testing.T) *golars.DataFrame {
+	t.Helper()
+	df, err := golars.NewDataFrame(
 		golars.NewInt64Series("age", []int64{25, 30, 35, 40, 45}),
 		golars.NewStringSeries("name", []string{"Alice", "Bob", "Charlie", "Diana", "Eve"}),
 		golars.NewFloat64Series("score", []float64{95.5, 82.3, 78.0, 91.2, 88.7}),
 		golars.NewFloat64SeriesWithValidity("bonus", []float64{100, 0, 200, 300, 0}, []bool{true, false, true, true, false}),
 		golars.NewBooleanSeries("active", []bool{true, false, true, true, false}),
 	)
+	if err != nil {
+		t.Fatalf("filterTestDF: %v", err)
+	}
 	return df
 }
 
+func assertFilterRows(t *testing.T, df *golars.DataFrame, expr string, wantRows int) {
+	t.Helper()
+	parsed, err := parseFilterExpr(expr, df)
+	if err != nil {
+		t.Fatalf("parseFilterExpr(%q) error: %v", expr, err)
+	}
+
+	ctx := &golars.ExprContext{DF: df}
+	mask, err := parsed.Evaluate(ctx)
+	if err != nil {
+		t.Fatalf("evaluate error: %v", err)
+	}
+
+	filtered, err := df.Filter(mask)
+	if err != nil {
+		t.Fatalf("filter error: %v", err)
+	}
+
+	if filtered.Height() != wantRows {
+		t.Errorf("expected %d rows, got %d", wantRows, filtered.Height())
+	}
+}
+
 func TestParseFilterExprComparison(t *testing.T) {
-	df := filterTestDF()
+	df := filterTestDF(t)
 
 	tests := []struct {
 		name     string
@@ -36,31 +63,13 @@ func TestParseFilterExprComparison(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			expr, err := parseFilterExpr(tt.expr, df)
-			if err != nil {
-				t.Fatalf("parseFilterExpr(%q) error: %v", tt.expr, err)
-			}
-
-			ctx := &golars.ExprContext{DF: df}
-			mask, err := expr.Evaluate(ctx)
-			if err != nil {
-				t.Fatalf("evaluate error: %v", err)
-			}
-
-			filtered, err := df.Filter(mask)
-			if err != nil {
-				t.Fatalf("filter error: %v", err)
-			}
-
-			if filtered.Height() != tt.wantRows {
-				t.Errorf("expected %d rows, got %d", tt.wantRows, filtered.Height())
-			}
+			assertFilterRows(t, df, tt.expr, tt.wantRows)
 		})
 	}
 }
 
 func TestParseFilterExprMethods(t *testing.T) {
-	df := filterTestDF()
+	df := filterTestDF(t)
 
 	tests := []struct {
 		name     string
@@ -76,31 +85,13 @@ func TestParseFilterExprMethods(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			expr, err := parseFilterExpr(tt.expr, df)
-			if err != nil {
-				t.Fatalf("parseFilterExpr(%q) error: %v", tt.expr, err)
-			}
-
-			ctx := &golars.ExprContext{DF: df}
-			mask, err := expr.Evaluate(ctx)
-			if err != nil {
-				t.Fatalf("evaluate error: %v", err)
-			}
-
-			filtered, err := df.Filter(mask)
-			if err != nil {
-				t.Fatalf("filter error: %v", err)
-			}
-
-			if filtered.Height() != tt.wantRows {
-				t.Errorf("expected %d rows, got %d", tt.wantRows, filtered.Height())
-			}
+			assertFilterRows(t, df, tt.expr, tt.wantRows)
 		})
 	}
 }
 
 func TestParseFilterExprLogical(t *testing.T) {
-	df := filterTestDF()
+	df := filterTestDF(t)
 
 	tests := []struct {
 		name     string
@@ -113,31 +104,13 @@ func TestParseFilterExprLogical(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			expr, err := parseFilterExpr(tt.expr, df)
-			if err != nil {
-				t.Fatalf("parseFilterExpr(%q) error: %v", tt.expr, err)
-			}
-
-			ctx := &golars.ExprContext{DF: df}
-			mask, err := expr.Evaluate(ctx)
-			if err != nil {
-				t.Fatalf("evaluate error: %v", err)
-			}
-
-			filtered, err := df.Filter(mask)
-			if err != nil {
-				t.Fatalf("filter error: %v", err)
-			}
-
-			if filtered.Height() != tt.wantRows {
-				t.Errorf("expected %d rows, got %d", tt.wantRows, filtered.Height())
-			}
+			assertFilterRows(t, df, tt.expr, tt.wantRows)
 		})
 	}
 }
 
 func TestParseFilterExprErrors(t *testing.T) {
-	df := filterTestDF()
+	df := filterTestDF(t)
 
 	tests := []struct {
 		name string
